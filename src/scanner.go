@@ -1,53 +1,9 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
-	"strings"
 )
-
-// debug flags
-var lexdebug = 1 // lexer debug
-
-type Logger struct {
-	lines   []string
-	dwriter io.Writer // debug writer
-	ewriter io.Writer // error writer
-}
-
-var logger = &Logger{}
-
-func (l *Logger) Reset(src string, dwriter, ewriter io.Writer) {
-	l.lines = []string{""}
-	l.lines = append(l.lines, strings.Split(src, "\n")...)
-	l.dwriter = dwriter
-	l.ewriter = ewriter
-}
-
-func (l *Logger) NewError(row, col int, errmsg string) error {
-	prefix := fmt.Sprintf("    %d | ", row)
-	lineMsg := fmt.Sprintf("%s%s", prefix, l.lines[row])
-	pointer := ""
-	for i := 1; i < len(prefix)+col; i++ {
-		pointer += " "
-	}
-	pointer += "^"
-	return fmt.Errorf("Error: %s\n%s\n%s\n", errmsg, lineMsg, pointer)
-}
-
-func (l *Logger) DPrintf(dflag int, format string, a ...interface{}) {
-	if dflag > 0 {
-		fmt.Fprintf(l.dwriter, format, a...)
-	}
-}
-
-func (l *Logger) EPrintf(format string, a ...interface{}) {
-	fmt.Fprintf(l.ewriter, format, a...)
-}
 
 // tokens
 type TokenType int32
@@ -260,6 +216,8 @@ func (s *Scanner) scanToken() {
 		// do nothing
 	} else if isDigit(b) {
 		s.number()
+	} else if isAlpha(b) {
+		s.keywordOrIdent()
 	} else {
 		s.other(b)
 	}
@@ -283,6 +241,8 @@ func (s *Scanner) advance() byte {
 	if s.peek() == '\n' {
 		s.row++
 		s.col = 1
+	} else if s.peek() == '\t' {
+		s.col = s.col + (8 - s.col/8)
 	} else {
 		s.col++
 	}
@@ -384,20 +344,23 @@ func (s *Scanner) other(b byte) {
 		if s.peek() == '=' {
 			s.advance()
 			s.addToken(EQUAL_EQUAL, nil)
+		} else {
+			s.addToken(EQUAL, nil)
 		}
-		s.addToken(EQUAL, nil)
 	case '>':
 		if s.peek() == '=' {
 			s.advance()
 			s.addToken(GREATER_EQUAL, nil)
+		} else {
+			s.addToken(GREATER, nil)
 		}
-		s.addToken(GREATER, nil)
 	case '<':
 		if s.peek() == '=' {
 			s.advance()
 			s.addToken(LESS_EQUAL, nil)
+		} else {
+			s.addToken(LESS, nil)
 		}
-		s.addToken(LESS, nil)
 
 	// string literal
 	case '"':
@@ -411,6 +374,37 @@ func (s *Scanner) other(b byte) {
 	}
 }
 
+var scannerKeywords = map[string]TokenType{
+	"and":    AND,
+	"class":  CLASS,
+	"else":   ELSE,
+	"false":  FALSE,
+	"fun":    FUN,
+	"for":    FOR,
+	"if":     IF,
+	"nil":    NIL,
+	"or":     OR,
+	"print":  PRINT,
+	"return": RETURN,
+	"super":  SUPER,
+	"this":   THIS,
+	"true":   TRUE,
+	"var":    VAR,
+	"while":  WHILE,
+}
+
+func (s *Scanner) keywordOrIdent() {
+	for isAlpha(s.peek()) || isDigit(s.peek()) {
+		s.advance()
+	}
+	token, isKeyword := scannerKeywords[s.lexeme()]
+	if isKeyword {
+		s.addToken(token, nil)
+	} else {
+		s.addToken(IDENTIFIER, s.lexeme())
+	}
+}
+
 func (s *Scanner) Token() (Token, error) {
 	if !s.scanned {
 		s.scan()
@@ -421,70 +415,4 @@ func (s *Scanner) Token() (Token, error) {
 	t := s.tokens[0]
 	s.tokens = s.tokens[1:]
 	return t, nil
-}
-
-func run(src string) error {
-	logger.Reset(src, os.Stdout, os.Stderr)
-
-	scanner := NewScanner(src)
-	token, err := scanner.Token()
-	for ; err == nil; token, err = scanner.Token() {
-		logger.DPrintf(lexdebug, "%s\n", token)
-	}
-
-	if scanner.hasError() {
-		for _, err := range scanner.errors {
-			logger.EPrintf("%s", err)
-		}
-		return errors.New("scanner error")
-	}
-
-	return nil
-}
-
-func runFile(filename string) error {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-	return run(string(data))
-}
-
-func prompt() {
-	fmt.Printf("> ")
-}
-
-func runPrompt() error {
-	var s string
-	var err error
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		prompt()
-		s, err = reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				os.Exit(0)
-			}
-			return err
-		}
-
-		err := run(s)
-		if err != nil {
-			return err
-		}
-	}
-}
-
-func main() {
-	if len(os.Args) > 2 {
-		fmt.Fprintf(os.Stderr, "usage %s [filename]", os.Args[0])
-	} else if len(os.Args) == 2 {
-		if err := runFile(os.Args[1]); err != nil {
-			fmt.Println(err)
-		}
-	} else {
-		if err := runPrompt(); err != nil {
-			fmt.Println(err)
-		}
-	}
 }
