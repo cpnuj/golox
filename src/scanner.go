@@ -429,7 +429,15 @@ func (s *Scanner) keywordOrIdent() {
 	}
 	token, isKeyword := scannerKeywords[s.lexeme()]
 	if isKeyword {
-		s.addToken(token, nil)
+		// keyword with value
+		switch token {
+		case TRUE:
+			s.addToken(TRUE, true)
+		case FALSE:
+			s.addToken(FALSE, false)
+		default:
+			s.addToken(token, nil)
+		}
 	} else {
 		s.addToken(IDENTIFIER, s.lexeme())
 	}

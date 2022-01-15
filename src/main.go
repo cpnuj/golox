@@ -17,10 +17,12 @@ func run(src string) error {
 	}
 
 	parser := NewParser(tokens)
-	_, err = parser.Parse()
+	ast, err := parser.Parse()
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(eval(ast))
 
 	return nil
 }
