@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,16 +11,9 @@ func run(src string) error {
 	logger.Reset(src, os.Stdout, os.Stderr)
 
 	scanner := NewScanner(src)
-	token, err := scanner.Token()
-	for ; err == nil; token, err = scanner.Token() {
-		logger.DPrintf(lexdebug, "%s\n", token)
-	}
-
-	if scanner.hasError() {
-		for _, err := range scanner.errors {
-			logger.EPrintf("%s", err)
-		}
-		return errors.New("scanner error")
+	_, err := scanner.Tokens()
+	if err != nil {
+		return err
 	}
 
 	return nil

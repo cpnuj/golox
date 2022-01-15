@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -143,6 +144,10 @@ func (t TokenType) String() string {
 		return "VAR"
 	case WHILE:
 		return "WHILE"
+
+	case EOF:
+		return "EOF"
+
 	default:
 		return ""
 	}
@@ -152,6 +157,17 @@ type Token struct {
 	typ    TokenType
 	lexeme string
 	lexval interface{}
+}
+
+func (token Token) Type() TokenType {
+	return token.typ
+}
+
+func (token Token) Value() interface{} {
+	if token.lexval == nil {
+		return token.lexeme
+	}
+	return token.lexval
 }
 
 func (token Token) String() string {
@@ -198,11 +214,25 @@ func NewScanner(src string) *Scanner {
 	}
 }
 
+func (s *Scanner) Tokens() ([]Token, error) {
+	s.scan()
+	if s.hasError() {
+		for _, err := range s.errors {
+			logger.EPrintf("%s", err)
+		}
+		return nil, errors.New("Scanner Error")
+	}
+	for _, token := range s.tokens {
+		logger.DPrintf(lexdebug, "%s\n", token)
+	}
+	return s.tokens, nil
+}
+
 func (s *Scanner) scan() {
 	for !s.atEnd() {
 		s.scanToken()
 	}
-	s.scanned = true
+	s.addToken(EOF, nil)
 }
 
 func (s *Scanner) hasError() bool {
@@ -403,16 +433,4 @@ func (s *Scanner) keywordOrIdent() {
 	} else {
 		s.addToken(IDENTIFIER, s.lexeme())
 	}
-}
-
-func (s *Scanner) Token() (Token, error) {
-	if !s.scanned {
-		s.scan()
-	}
-	if len(s.tokens) == 0 {
-		return Token{}, fmt.Errorf("")
-	}
-	t := s.tokens[0]
-	s.tokens = s.tokens[1:]
-	return t, nil
 }
