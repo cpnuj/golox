@@ -61,12 +61,12 @@ func defineAST(baseName string, types []Type) {
 		}
 		writef("}\n\n")
 
-		writef("func(this *%s) Type() %sType {\n", typeName, baseName)
+		writef("func(node *%s) Type() %sType {\n", typeName, baseName)
 		writef("\treturn %sType%s\n", baseName, types[i].typename)
 		writef("}\n\n")
 
-		writef("func(this *%s) Accept(v %sVisitor) interface{} {\n", typeName, baseName)
-		writef("\treturn v.Visit%s(this)\n", types[i].typename)
+		writef("func(node *%s) Accept(v %sVisitor) interface{} {\n", typeName, baseName)
+		writef("\treturn v.Visit%s(node)\n", types[i].typename)
 		writef("}\n\n")
 	}
 }
@@ -105,13 +105,6 @@ func main() {
 			{"Expr", "Left"},
 			{"Token", "Operator"},
 			{"Expr", "Right"},
-		},
-	})
-
-	types = append(types, Type{
-		typename: "Operator",
-		fields: []Field{
-			{"Token", "Value"},
 		},
 	})
 

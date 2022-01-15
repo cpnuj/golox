@@ -11,7 +11,13 @@ func run(src string) error {
 	logger.Reset(src, os.Stdout, os.Stderr)
 
 	scanner := NewScanner(src)
-	_, err := scanner.Tokens()
+	tokens, err := scanner.Tokens()
+	if err != nil {
+		return err
+	}
+
+	parser := NewParser(tokens)
+	_, err = parser.Parse()
 	if err != nil {
 		return err
 	}
