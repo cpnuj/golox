@@ -157,6 +157,9 @@ type Token struct {
 	typ    TokenType
 	lexeme string
 	lexval interface{}
+	// token position in source code
+	row int
+	col int
 }
 
 func (token Token) Type() TokenType {
@@ -168,6 +171,10 @@ func (token Token) Value() interface{} {
 		return token.lexeme
 	}
 	return token.lexval
+}
+
+func (token Token) Pos() (row, col int) {
+	return token.row, token.col
 }
 
 func (token Token) String() string {
@@ -194,8 +201,10 @@ type Scanner struct {
 	src     []byte
 	start   int
 	current int
-	row     int
-	col     int
+	row     int // current row
+	col     int // current col
+	srow    int // start row
+	scol    int // start col
 	scanned bool
 	errors  []error
 	tokens  []Token
@@ -208,6 +217,8 @@ func NewScanner(src string) *Scanner {
 		current: 0,
 		row:     1,
 		col:     1,
+		srow:    1,
+		scol:    1,
 		scanned: false,
 		errors:  make([]error, 0),
 		tokens:  make([]Token, 0),
@@ -253,6 +264,7 @@ func (s *Scanner) scanToken() {
 	}
 
 	s.start = s.current
+	s.srow, s.scol = s.row, s.col
 }
 
 func (s *Scanner) addToken(typ TokenType, val interface{}) {
@@ -260,6 +272,8 @@ func (s *Scanner) addToken(typ TokenType, val interface{}) {
 		typ:    typ,
 		lexeme: s.lexeme(),
 		lexval: val,
+		row:    s.srow,
+		col:    s.scol,
 	})
 }
 

@@ -62,7 +62,7 @@ func runPrompt() error {
 
 		err := run(s)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Print(err)
 		}
 	}
 }

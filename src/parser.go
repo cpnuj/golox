@@ -1,7 +1,5 @@
 package main
 
-import "errors"
-
 type Parser struct {
 	tokens  []Token
 	current int
@@ -65,7 +63,8 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 	if p.check(t) {
 		return p.advance(), nil
 	}
-	return Token{}, errors.New(msg)
+	row, col := p.peek().Pos()
+	return Token{}, logger.NewError(row, col, msg)
 }
 
 //
@@ -224,5 +223,6 @@ func (p *Parser) primary() (Expr, error) {
 		return &ExprGrouping{Expression: expr}, nil
 	}
 
-	return nil, errors.New("expect expression")
+	row, col := p.peek().Pos()
+	return nil, logger.NewError(row, col, "expect expression")
 }
