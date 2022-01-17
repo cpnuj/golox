@@ -30,7 +30,7 @@ func defineAST(baseName string, types []Type) {
 	// write common interface
 	writef("type %s interface {\n", baseName)
 	writef("\tType() %sType\n", baseName)
-	writef("\tAccept(%sVisitor) interface{}\n", baseName)
+	writef("\tAccept(%sVisitor) (interface{}, error)\n", baseName)
 	writef("}\n\n")
 
 	// write type enum and add acceptors
@@ -48,7 +48,7 @@ func defineAST(baseName string, types []Type) {
 	// write visitor interface
 	writef("type %sVisitor interface {\n", baseName)
 	for _, acceptor := range acceptors {
-		writef("\tVisit%s(*%s%s) interface{}\n", acceptor, baseName, acceptor)
+		writef("\tVisit%s(*%s%s) (interface{}, error)\n", acceptor, baseName, acceptor)
 	}
 	writef("}\n\n")
 
@@ -65,7 +65,7 @@ func defineAST(baseName string, types []Type) {
 		writef("\treturn %sType%s\n", baseName, types[i].typename)
 		writef("}\n\n")
 
-		writef("func(node *%s) Accept(v %sVisitor) interface{} {\n", typeName, baseName)
+		writef("func(node *%s) Accept(v %sVisitor) (interface{}, error) {\n", typeName, baseName)
 		writef("\treturn v.Visit%s(node)\n", types[i].typename)
 		writef("}\n\n")
 	}

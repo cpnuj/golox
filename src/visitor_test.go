@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -42,7 +41,10 @@ func TestPrintVisitor(t *testing.T) {
 
 	p := &ExprPrintVisitor{}
 
-	get := fmt.Sprintf("%v", top.Accept(p))
+	get, err := p.Print(&top)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if get != expect {
 		t.Fatalf("expect: %s\nget: %s\n", expect, get)

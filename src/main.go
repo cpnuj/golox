@@ -22,7 +22,13 @@ func run(src string) error {
 		return err
 	}
 
-	fmt.Println(eval(ast))
+	interpreter := &Interpreter{}
+	result, err := interpreter.Interprete(ast)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(result)
 
 	return nil
 }
@@ -36,7 +42,7 @@ func runFile(filename string) error {
 }
 
 func prompt() {
-	fmt.Printf("> ")
+	fmt.Printf(">>> ")
 }
 
 func runPrompt() error {

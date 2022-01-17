@@ -2,7 +2,7 @@ package main
 
 type Expr interface {
 	Type() ExprType
-	Accept(ExprVisitor) interface{}
+	Accept(ExprVisitor) (interface{}, error)
 }
 
 type ExprType int32
@@ -15,10 +15,10 @@ const (
 )
 
 type ExprVisitor interface {
-	VisitLiteral(*ExprLiteral) interface{}
-	VisitUnary(*ExprUnary) interface{}
-	VisitGrouping(*ExprGrouping) interface{}
-	VisitBinary(*ExprBinary) interface{}
+	VisitLiteral(*ExprLiteral) (interface{}, error)
+	VisitUnary(*ExprUnary) (interface{}, error)
+	VisitGrouping(*ExprGrouping) (interface{}, error)
+	VisitBinary(*ExprBinary) (interface{}, error)
 }
 
 type ExprLiteral struct{
@@ -29,7 +29,7 @@ func(node *ExprLiteral) Type() ExprType {
 	return ExprTypeLiteral
 }
 
-func(node *ExprLiteral) Accept(v ExprVisitor) interface{} {
+func(node *ExprLiteral) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitLiteral(node)
 }
 
@@ -42,7 +42,7 @@ func(node *ExprUnary) Type() ExprType {
 	return ExprTypeUnary
 }
 
-func(node *ExprUnary) Accept(v ExprVisitor) interface{} {
+func(node *ExprUnary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitUnary(node)
 }
 
@@ -54,7 +54,7 @@ func(node *ExprGrouping) Type() ExprType {
 	return ExprTypeGrouping
 }
 
-func(node *ExprGrouping) Accept(v ExprVisitor) interface{} {
+func(node *ExprGrouping) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitGrouping(node)
 }
 
@@ -68,7 +68,7 @@ func(node *ExprBinary) Type() ExprType {
 	return ExprTypeBinary
 }
 
-func(node *ExprBinary) Accept(v ExprVisitor) interface{} {
+func(node *ExprBinary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitBinary(node)
 }
 

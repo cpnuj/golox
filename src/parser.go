@@ -19,7 +19,10 @@ func (p *Parser) Parse() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.DPrintf(parsedebug, "%v\n", expr.Accept(&ExprPrintVisitor{}))
+
+	printer := &ExprPrintVisitor{}
+	log, _ := printer.Print(expr)
+	logger.DPrintf(parsedebug, "%v\n", log)
 	return expr, nil
 }
 

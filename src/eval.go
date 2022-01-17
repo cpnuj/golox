@@ -1,10 +1,41 @@
 package main
 
+import (
+	"errors"
+)
+
 type Interpreter struct {
 }
 
-func eval(expr Expr) interface{} {
-	return expr.Accept(&Interpreter{})
+func (i *Interpreter) Interprete(expr Expr) (interface{}, error) {
+	return expr.Accept(i)
+}
+
+func checkNumOperands(operands ...interface{}) bool {
+	for _, operand := range operands {
+		if _, ok := operand.(float64); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func checkStringOperands(operands ...interface{}) bool {
+	for _, operand := range operands {
+		if _, ok := operand.(string); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func checkBoolOperands(operands ...interface{}) bool {
+	for _, operand := range operands {
+		if _, ok := operand.(bool); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func isTruthy(obj interface{}) bool {
@@ -17,118 +48,114 @@ func isTruthy(obj interface{}) bool {
 	return true
 }
 
-func (p *Interpreter) VisitLiteral(expr *ExprLiteral) interface{} {
-	return expr.Value.Value()
+func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
+	return expr.Value.Value(), nil
 }
 
-func (p *Interpreter) VisitUnary(expr *ExprUnary) interface{} {
-	right := eval(expr)
+func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
+	right, err := i.Interprete(expr.Expression)
+	if err != nil {
+		return nil, err
+	}
 
 	switch expr.UnaryOperator.Type() {
 	case MINUS:
-		if num, ok := right.(float64); ok {
-			return -num
+		if !checkNumOperands(right) {
+			return nil, errors.New("operand of - must be a number")
 		}
+		return -right.(float64), nil
 	case BANG:
-		return !isTruthy(right)
+		return !isTruthy(right), nil
+	default:
+		panic("golox error: invalid unary operator type")
+	}
+}
+
+func (i *Interpreter) VisitGrouping(expr *ExprGrouping) (interface{}, error) {
+	return i.Interprete(expr.Expression)
+}
+
+func (i *Interpreter) VisitBinary(expr *ExprBinary) (interface{}, error) {
+	left, err := i.Interprete(expr.Left)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
-}
-
-func (p *Interpreter) VisitGrouping(expr *ExprGrouping) interface{} {
-	return eval(expr.Expression)
-}
-
-func (p *Interpreter) VisitBinary(expr *ExprBinary) interface{} {
-	left, right := eval(expr.Left), eval(expr.Right)
+	right, err := i.Interprete(expr.Right)
+	if err != nil {
+		return nil, err
+	}
 
 	switch expr.Operator.Type() {
-	// number
 	case PLUS:
-		// number?
-		ln, lok := left.(float64)
-		rn, rok := right.(float64)
-		if lok && rok {
-			return ln + rn
+		if checkNumOperands(left, right) {
+			return left.(float64) + right.(float64), nil
 		}
-		// string?
-		ls, lok := left.(string)
-		rs, rok := right.(string)
-		if lok && rok {
-			return ls + rs
+		if checkStringOperands(left, right) {
+			return left.(string) + right.(string), nil
 		}
+		return nil, errors.New("operands of + must be two strings or two numbers")
 	case MINUS:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l - r
+		if checkNumOperands(left, right) {
+			return left.(float64) - right.(float64), nil
 		}
+		return nil, errors.New("operands of - must be two numbers")
 	case STAR:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l * r
+		if checkNumOperands(left, right) {
+			return left.(float64) * right.(float64), nil
 		}
+		return nil, errors.New("operands of * must be two numbers")
 	case SLASH:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l / r
+		if checkNumOperands(left, right) {
+			return left.(float64) / right.(float64), nil
 		}
+		return nil, errors.New("operands of / must be two numbers")
 	case GREATER:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l > r
+		if checkNumOperands(left, right) {
+			return left.(float64) > right.(float64), nil
 		}
+		return nil, errors.New("operands of > must be two numbers")
 	case GREATER_EQUAL:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l >= r
+		if checkNumOperands(left, right) {
+			return left.(float64) >= right.(float64), nil
 		}
+		return nil, errors.New("operands of >= must be two numbers")
 	case LESS:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l < r
+		if checkNumOperands(left, right) {
+			return left.(float64) < right.(float64), nil
 		}
+		return nil, errors.New("operands of < must be two numbers")
 	case LESS_EQUAL:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l <= r
+		if checkNumOperands(left, right) {
+			return left.(float64) <= right.(float64), nil
 		}
+		return nil, errors.New("operands of <= must be two numbers")
 
 	// FIXME: Support == and != operator for other objects
 	case EQUAL_EQUAL:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l == r
+		if checkNumOperands(left, right) {
+			return left.(float64) == right.(float64), nil
 		}
+		return nil, errors.New("operands of == must be two numbers")
 	case BANG_EQUAL:
-		l, lok := left.(float64)
-		r, rok := right.(float64)
-		if lok && rok {
-			return l != r
+		if checkNumOperands(left, right) {
+			return left.(float64) != right.(float64), nil
 		}
+		return nil, errors.New("operands of != must be two numbers")
 
 	// logic
 	case AND:
-		l, lok := left.(bool)
-		r, rok := right.(bool)
-		if lok && rok {
-			return l && r
+		if checkBoolOperands(left, right) {
+			return left.(bool) && right.(bool), nil
 		}
+		return nil, errors.New("operands of and must be two bools")
 	case OR:
-		l, lok := left.(bool)
-		r, rok := right.(bool)
-		if lok && rok {
-			return l || r
+		if checkBoolOperands(left, right) {
+			return left.(bool) || right.(bool), nil
 		}
-	}
+		return nil, errors.New("operands of or must be two bools")
 
-	return nil
+	default:
+		panic("golox error: invalid binary operator type")
+	}
 }
