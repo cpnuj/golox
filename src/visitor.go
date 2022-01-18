@@ -8,6 +8,8 @@ import (
 type ExprPrintVisitor struct {
 }
 
+var _ ExprVisitor = &ExprPrintVisitor{}
+
 func (p *ExprPrintVisitor) Print(expr Expr) (string, error) {
 	result, err := expr.Accept(p)
 	if err != nil {
@@ -26,6 +28,10 @@ func stringify(a interface{}) string {
 
 func (p *ExprPrintVisitor) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 	return stringify(expr.Value.Value()), nil
+}
+
+func (p *ExprPrintVisitor) VisitVariable(expr *ExprVariable) (interface{}, error) {
+	return stringify(expr.Name.Value()), nil
 }
 
 func (p *ExprPrintVisitor) VisitUnary(expr *ExprUnary) (interface{}, error) {

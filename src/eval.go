@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 type Interpreter struct {
+	env map[string]interface{}
 }
 
 var (
@@ -11,7 +12,9 @@ var (
 )
 
 func NewInterpreter() *Interpreter {
-	return &Interpreter{}
+	return &Interpreter{
+		env: make(map[string]interface{}),
+	}
 }
 
 func (i *Interpreter) Interprete(statements []Stmt) error {
@@ -77,6 +80,15 @@ func (i *Interpreter) eval(expr Expr) (interface{}, error) {
 
 func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 	return expr.Value.Value(), nil
+}
+
+func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
+	name := expr.Name.Value().(string)
+	value, ok := i.env[name]
+	if !ok {
+		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+	}
+	return value, nil
 }
 
 func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
@@ -197,5 +209,24 @@ func (i *Interpreter) VisitPrint(statement *StmtPrint) (interface{}, error) {
 		return nil, err
 	}
 	fmt.Println(value)
+	return nil, nil
+}
+
+func (i *Interpreter) VisitVar(statement *StmtVar) (interface{}, error) {
+	var name string
+	var initializer interface{}
+	var err error
+
+	name = statement.Name.Value().(string)
+
+	if statement.Initializer != nil {
+		initializer, err = i.eval(statement.Initializer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	i.env[name] = initializer
+
 	return nil, nil
 }

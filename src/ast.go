@@ -9,6 +9,7 @@ type ExprType int32
 const (
 	ExprTypeIdle = iota
 	ExprTypeLiteral
+	ExprTypeVariable
 	ExprTypeUnary
 	ExprTypeGrouping
 	ExprTypeBinary
@@ -16,6 +17,7 @@ const (
 
 type ExprVisitor interface {
 	VisitLiteral(*ExprLiteral) (interface{}, error)
+	VisitVariable(*ExprVariable) (interface{}, error)
 	VisitUnary(*ExprUnary) (interface{}, error)
 	VisitGrouping(*ExprGrouping) (interface{}, error)
 	VisitBinary(*ExprBinary) (interface{}, error)
@@ -31,6 +33,18 @@ func(node *ExprLiteral) Type() ExprType {
 
 func(node *ExprLiteral) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitLiteral(node)
+}
+
+type ExprVariable struct{
+	Name Token
+}
+
+func(node *ExprVariable) Type() ExprType {
+	return ExprTypeVariable
+}
+
+func(node *ExprVariable) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitVariable(node)
 }
 
 type ExprUnary struct{
@@ -82,11 +96,13 @@ const (
 	StmtTypeIdle = iota
 	StmtTypeExpression
 	StmtTypePrint
+	StmtTypeVar
 )
 
 type StmtVisitor interface {
 	VisitExpression(*StmtExpression) (interface{}, error)
 	VisitPrint(*StmtPrint) (interface{}, error)
+	VisitVar(*StmtVar) (interface{}, error)
 }
 
 type StmtExpression struct{
@@ -111,5 +127,18 @@ func(node *StmtPrint) Type() StmtType {
 
 func(node *StmtPrint) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitPrint(node)
+}
+
+type StmtVar struct{
+	Name Token
+	Initializer Expr
+}
+
+func(node *StmtVar) Type() StmtType {
+	return StmtTypeVar
+}
+
+func(node *StmtVar) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitVar(node)
 }
 
