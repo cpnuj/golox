@@ -1,10 +1,32 @@
 package main
 
+import "fmt"
+
 type Interpreter struct {
 }
 
-func (i *Interpreter) Interprete(expr Expr) (interface{}, error) {
-	return expr.Accept(i)
+var (
+	_ ExprVisitor = &Interpreter{}
+	_ StmtVisitor = &Interpreter{}
+)
+
+func NewInterpreter() *Interpreter {
+	return &Interpreter{}
+}
+
+func (i *Interpreter) Interprete(statements []Stmt) error {
+	for _, statement := range statements {
+		err := i.execute(statement)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *Interpreter) execute(statement Stmt) error {
+	_, err := statement.Accept(i)
+	return err
 }
 
 func (i *Interpreter) runtimeError(token Token, msg string) error {
@@ -49,12 +71,16 @@ func isTruthy(obj interface{}) bool {
 	return true
 }
 
+func (i *Interpreter) eval(expr Expr) (interface{}, error) {
+	return expr.Accept(i)
+}
+
 func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 	return expr.Value.Value(), nil
 }
 
 func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
-	right, err := i.Interprete(expr.Expression)
+	right, err := i.eval(expr.Expression)
 	if err != nil {
 		return nil, err
 	}
@@ -73,16 +99,16 @@ func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitGrouping(expr *ExprGrouping) (interface{}, error) {
-	return i.Interprete(expr.Expression)
+	return i.eval(expr.Expression)
 }
 
 func (i *Interpreter) VisitBinary(expr *ExprBinary) (interface{}, error) {
-	left, err := i.Interprete(expr.Left)
+	left, err := i.eval(expr.Left)
 	if err != nil {
 		return nil, err
 	}
 
-	right, err := i.Interprete(expr.Right)
+	right, err := i.eval(expr.Right)
 	if err != nil {
 		return nil, err
 	}
@@ -159,4 +185,17 @@ func (i *Interpreter) VisitBinary(expr *ExprBinary) (interface{}, error) {
 	default:
 		panic("golox error: invalid binary operator type")
 	}
+}
+
+func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {
+	return i.eval(statement.Expression)
+}
+
+func (i *Interpreter) VisitPrint(statement *StmtPrint) (interface{}, error) {
+	value, err := i.eval(statement.Expression)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(value)
+	return nil, nil
 }

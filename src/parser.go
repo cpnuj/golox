@@ -12,18 +12,6 @@ func NewParser(tokens []Token) *Parser {
 	}
 }
 
-func (p *Parser) Parse() (Expr, error) {
-	expr, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-
-	printer := &ExprPrintVisitor{}
-	log, _ := printer.Print(expr)
-	logger.DPrintf(parsedebug, "%v\n", log)
-	return expr, nil
-}
-
 func (p *Parser) atEnd() bool {
 	return p.current >= len(p.tokens)
 }
@@ -59,12 +47,76 @@ func (p *Parser) check(tokens ...TokenType) bool {
 	return false
 }
 
+func (p *Parser) match(tokens ...TokenType) bool {
+	if p.check(tokens...) {
+		p.advance()
+		return true
+	}
+	return false
+}
+
 func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 	if p.check(t) {
 		return p.advance(), nil
 	}
 	row, col := p.peek().Pos()
 	return Token{}, logger.NewError(row, col, msg)
+}
+
+//
+// CFG for program:
+// program        → statement* EOF ;
+// statement      → exprStmt
+//                | printStmt ;
+// exprStmt       → expression ";" ;
+// printStmt      → "print" expression ";" ;
+//
+
+func (p *Parser) Parse() ([]Stmt, error) {
+	statements := make([]Stmt, 0)
+	for !p.match(EOF) {
+		statement, err := p.statement()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, statement)
+	}
+	return statements, nil
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(PRINT) {
+		return p.printStmt()
+	}
+	return p.exprStmt()
+}
+
+func (p *Parser) printStmt() (Stmt, error) {
+	value, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(SEMICOLON, "expect ; after statement")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtPrint{Expression: value}, nil
+}
+
+func (p *Parser) exprStmt() (Stmt, error) {
+	value, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(SEMICOLON, "expect ; after statement")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtExpression{Expression: value}, nil
 }
 
 //
@@ -214,9 +266,8 @@ func (p *Parser) primary() (Expr, error) {
 			return nil, err
 		}
 
-		if _, err := p.consume(
-			RIGHT_PAREN, "Expect ')' after expression",
-		); err != nil {
+		_, err = p.consume(RIGHT_PAREN, "Expect ')' after expression")
+		if err != nil {
 			return nil, err
 		}
 

@@ -7,6 +7,12 @@ import (
 	"os"
 )
 
+var interpreter *Interpreter
+
+func init() {
+	interpreter = NewInterpreter()
+}
+
 func run(src string) error {
 	logger.Reset(src, os.Stdout, os.Stderr)
 
@@ -17,20 +23,12 @@ func run(src string) error {
 	}
 
 	parser := NewParser(tokens)
-	ast, err := parser.Parse()
+	statements, err := parser.Parse()
 	if err != nil {
 		return err
 	}
 
-	interpreter := &Interpreter{}
-	result, err := interpreter.Interprete(ast)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(result)
-
-	return nil
+	return interpreter.Interprete(statements)
 }
 
 func runFile(filename string) error {

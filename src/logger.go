@@ -7,8 +7,8 @@ import (
 )
 
 // debug flags
-var lexdebug = 0   // lexer debug
-var parsedebug = 0 // parser debug
+var lexdebug = 0 // lexer debug
+// var parsedebug = 0 // parser debug
 
 type Logger struct {
 	lines   []string
