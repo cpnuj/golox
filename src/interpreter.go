@@ -91,6 +91,21 @@ func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
 	return value, nil
 }
 
+func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
+	name := expr.Name.Value().(string)
+	if _, ok := i.env[name]; !ok {
+		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+	}
+
+	value, err := i.eval(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	i.env[name] = value
+	return value, nil
+}
+
 func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
 	right, err := i.eval(expr.Expression)
 	if err != nil {

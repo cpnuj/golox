@@ -92,6 +92,14 @@ func main() {
 	})
 
 	types = append(types, Type{
+		typename: "Assign",
+		fields: []Field{
+			{"Token", "Name"},
+			{"Expr", "Value"},
+		},
+	})
+
+	types = append(types, Type{
 		typename: "Unary",
 		fields: []Field{
 			{"Token", "UnaryOperator"},

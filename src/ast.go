@@ -10,6 +10,7 @@ const (
 	ExprTypeIdle = iota
 	ExprTypeLiteral
 	ExprTypeVariable
+	ExprTypeAssign
 	ExprTypeUnary
 	ExprTypeGrouping
 	ExprTypeBinary
@@ -18,6 +19,7 @@ const (
 type ExprVisitor interface {
 	VisitLiteral(*ExprLiteral) (interface{}, error)
 	VisitVariable(*ExprVariable) (interface{}, error)
+	VisitAssign(*ExprAssign) (interface{}, error)
 	VisitUnary(*ExprUnary) (interface{}, error)
 	VisitGrouping(*ExprGrouping) (interface{}, error)
 	VisitBinary(*ExprBinary) (interface{}, error)
@@ -45,6 +47,19 @@ func(node *ExprVariable) Type() ExprType {
 
 func(node *ExprVariable) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitVariable(node)
+}
+
+type ExprAssign struct{
+	Name Token
+	Value Expr
+}
+
+func(node *ExprAssign) Type() ExprType {
+	return ExprTypeAssign
+}
+
+func(node *ExprAssign) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitAssign(node)
 }
 
 type ExprUnary struct{

@@ -34,6 +34,14 @@ func (p *ExprPrintVisitor) VisitVariable(expr *ExprVariable) (interface{}, error
 	return stringify(expr.Name.Value()), nil
 }
 
+func (p *ExprPrintVisitor) VisitAssign(expr *ExprAssign) (interface{}, error) {
+	value, err := p.Print(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+	return parenness("=", stringify(expr.Name.Value()), stringify(value)), nil
+}
+
 func (p *ExprPrintVisitor) VisitUnary(expr *ExprUnary) (interface{}, error) {
 	operator := expr.UnaryOperator.Value()
 	operand, err := expr.Expression.Accept(p)

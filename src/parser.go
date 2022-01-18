@@ -158,7 +158,9 @@ func (p *Parser) exprStmt() (Stmt, error) {
 //
 // CFG for expression:
 //
-// expression     → equality ;
+// expression     → assignment ;
+// assignment     → IDENTIFIER "=" assignment
+//                | equality ;
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term           → factor ( ( "-" | "+" ) factor )* ;
@@ -171,7 +173,34 @@ func (p *Parser) exprStmt() (Stmt, error) {
 //
 
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(EQUAL) {
+		left, ok := expr.(*ExprVariable)
+		if !ok {
+			row, col := p.previous().Pos()
+			return nil, logger.NewError(row, col, "invalid assign target")
+		}
+
+		right, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ExprAssign{
+			Name:  left.Name,
+			Value: right,
+		}
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) equality() (Expr, error) {
