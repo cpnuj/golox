@@ -109,4 +109,22 @@ func main() {
 	})
 
 	defineAST("Expr", types)
+
+	types = []Type{}
+
+	types = append(types, Type{
+		typename: "Expression",
+		fields: []Field{
+			{"Expr", "Expression"},
+		},
+	})
+
+	types = append(types, Type{
+		typename: "Print",
+		fields: []Field{
+			{"Expr", "Expression"},
+		},
+	})
+
+	defineAST("Stmt", types)
 }

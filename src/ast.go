@@ -72,3 +72,44 @@ func(node *ExprBinary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitBinary(node)
 }
 
+type Stmt interface {
+	Type() StmtType
+	Accept(StmtVisitor) (interface{}, error)
+}
+
+type StmtType int32
+const (
+	StmtTypeIdle = iota
+	StmtTypeExpression
+	StmtTypePrint
+)
+
+type StmtVisitor interface {
+	VisitExpression(*StmtExpression) (interface{}, error)
+	VisitPrint(*StmtPrint) (interface{}, error)
+}
+
+type StmtExpression struct{
+	Expression Expr
+}
+
+func(node *StmtExpression) Type() StmtType {
+	return StmtTypeExpression
+}
+
+func(node *StmtExpression) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitExpression(node)
+}
+
+type StmtPrint struct{
+	Expression Expr
+}
+
+func(node *StmtPrint) Type() StmtType {
+	return StmtTypePrint
+}
+
+func(node *StmtPrint) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitPrint(node)
+}
+
