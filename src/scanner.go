@@ -351,6 +351,12 @@ func (s *Scanner) string() {
 	))
 }
 
+func (s *Scanner) comment() {
+	for !s.atEnd() && s.peek() != '\n' {
+		s.advance()
+	}
+}
+
 func (s *Scanner) other(b byte) {
 	switch b {
 	// single character
@@ -372,10 +378,16 @@ func (s *Scanner) other(b byte) {
 		s.addToken(PLUS, nil)
 	case '*':
 		s.addToken(STAR, nil)
-	case '/':
-		s.addToken(SLASH, nil)
 	case ';':
 		s.addToken(SEMICOLON, nil)
+
+	case '/':
+		// comment
+		if s.peek() == '/' {
+			s.comment()
+		} else {
+			s.addToken(SLASH, nil)
+		}
 
 	// one or two characters
 	case '!':
