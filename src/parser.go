@@ -75,13 +75,16 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //
 // statement      → exprStmt
 //                | printStmt
-//                | blockStmt ;
+//                | blockStmt
+//                | ifStmt ;
 //
 // exprStmt       → expression ";" ;
 //
 // printStmt      → "print" expression ";" ;
 //
 // blockStmt      → "{" declaration* "}" ;
+//
+// ifStmt         → "if" "(" expression ")" statement ("else" statement)? ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -132,6 +135,9 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(LEFT_BRACE) {
 		return p.blockStmt()
 	}
+	if p.match(IF) {
+		return p.ifStmt()
+	}
 	return p.exprStmt()
 }
 
@@ -180,6 +186,42 @@ func (p *Parser) blockStmt() (Stmt, error) {
 
 	return &StmtBlock{
 		Statements: statements,
+	}, nil
+}
+
+func (p *Parser) ifStmt() (Stmt, error) {
+	_, err := p.consume(LEFT_PAREN, "expect ( after if")
+	if err != nil {
+		return nil, err
+	}
+
+	cond, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "expect )")
+	if err != nil {
+		return nil, err
+	}
+
+	thenBranch, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	var elseBranch Stmt
+	if p.match(ELSE) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &StmtIf{
+		Cond: cond,
+		Then: thenBranch,
+		Else: elseBranch,
 	}, nil
 }
 

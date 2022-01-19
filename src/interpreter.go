@@ -304,3 +304,16 @@ func (i *Interpreter) VisitBlock(statement *StmtBlock) (interface{}, error) {
 
 	return nil, nil
 }
+
+func (i *Interpreter) VisitIf(statement *StmtIf) (interface{}, error) {
+	cond, err := i.eval(statement.Cond)
+	if err != nil {
+		return nil, err
+	}
+	if isTruthy(cond) {
+		return nil, i.execute(statement.Then)
+	} else if statement.Else != nil {
+		return nil, i.execute(statement.Else)
+	}
+	return nil, nil
+}

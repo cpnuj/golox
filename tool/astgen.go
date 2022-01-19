@@ -156,5 +156,14 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "If",
+		fields: []Field{
+			{"Expr", "Cond"},
+			{"Stmt", "Then"},
+			{"Stmt", "Else"},
+		},
+	})
+
 	defineAST("Stmt", types)
 }

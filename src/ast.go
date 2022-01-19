@@ -113,6 +113,7 @@ const (
 	StmtTypePrint
 	StmtTypeVar
 	StmtTypeBlock
+	StmtTypeIf
 )
 
 type StmtVisitor interface {
@@ -120,6 +121,7 @@ type StmtVisitor interface {
 	VisitPrint(*StmtPrint) (interface{}, error)
 	VisitVar(*StmtVar) (interface{}, error)
 	VisitBlock(*StmtBlock) (interface{}, error)
+	VisitIf(*StmtIf) (interface{}, error)
 }
 
 type StmtExpression struct{
@@ -169,5 +171,19 @@ func(node *StmtBlock) Type() StmtType {
 
 func(node *StmtBlock) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitBlock(node)
+}
+
+type StmtIf struct{
+	Cond Expr
+	Then Stmt
+	Else Stmt
+}
+
+func(node *StmtIf) Type() StmtType {
+	return StmtTypeIf
+}
+
+func(node *StmtIf) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitIf(node)
 }
 
