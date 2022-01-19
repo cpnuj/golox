@@ -2,8 +2,49 @@ package main
 
 import "fmt"
 
+type Environment struct {
+	parent *Environment
+	values map[string]interface{}
+}
+
+func NewEnvironment(parent *Environment) *Environment {
+	return &Environment{
+		parent: parent,
+		values: make(map[string]interface{}),
+	}
+}
+
+func (env *Environment) Define(name string, value interface{}) {
+	env.values[name] = value
+}
+
+func (env *Environment) Set(name string, value interface{}) bool {
+	if _, found := env.values[name]; found {
+		env.values[name] = value
+		return true
+	}
+
+	if env.parent != nil {
+		return env.parent.Set(name, value)
+	}
+
+	return false
+}
+
+func (env *Environment) Get(name string) (interface{}, bool) {
+	if value, found := env.values[name]; found {
+		return value, true
+	}
+
+	if env.parent != nil {
+		return env.parent.Get(name)
+	}
+
+	return nil, false
+}
+
 type Interpreter struct {
-	env map[string]interface{}
+	environment *Environment
 }
 
 var (
@@ -13,7 +54,7 @@ var (
 
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
-		env: make(map[string]interface{}),
+		environment: NewEnvironment(nil),
 	}
 }
 
@@ -84,7 +125,7 @@ func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 
 func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
 	name := expr.Name.Value().(string)
-	value, ok := i.env[name]
+	value, ok := i.environment.Get(name)
 	if !ok {
 		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
 	}
@@ -93,16 +134,15 @@ func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
 
 func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
 	name := expr.Name.Value().(string)
-	if _, ok := i.env[name]; !ok {
-		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
-	}
-
 	value, err := i.eval(expr.Value)
 	if err != nil {
 		return nil, err
 	}
 
-	i.env[name] = value
+	if ok := i.environment.Set(name, value); !ok {
+		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+	}
+
 	return value, nil
 }
 
@@ -241,7 +281,26 @@ func (i *Interpreter) VisitVar(statement *StmtVar) (interface{}, error) {
 		}
 	}
 
-	i.env[name] = initializer
+	i.environment.Define(name, initializer)
+
+	return nil, nil
+}
+
+func (i *Interpreter) VisitBlock(statement *StmtBlock) (interface{}, error) {
+	// enter new environment
+	previous := i.environment
+	i.environment = NewEnvironment(previous)
+
+	// back to old environment
+	defer func() {
+		i.environment = previous
+	}()
+
+	for _, stmt := range statement.Statements {
+		if err := i.execute(stmt); err != nil {
+			return nil, err
+		}
+	}
 
 	return nil, nil
 }

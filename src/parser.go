@@ -68,15 +68,20 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //
 // program        → declaration* EOF ;
 //
-// declaration    → varDecl ;
-//                | statement;
+// declaration    → varDecl
+//                | statement ;
+//
+// varDecl        → VAR IDENTIFIER "=" expression ;
 //
 // statement      → exprStmt
-//                | printStmt ;
+//                | printStmt
+//                | blockStmt ;
 //
 // exprStmt       → expression ";" ;
 //
 // printStmt      → "print" expression ";" ;
+//
+// blockStmt      → "{" declaration* "}" ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -124,6 +129,9 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(PRINT) {
 		return p.printStmt()
 	}
+	if p.match(LEFT_BRACE) {
+		return p.blockStmt()
+	}
 	return p.exprStmt()
 }
 
@@ -153,6 +161,26 @@ func (p *Parser) exprStmt() (Stmt, error) {
 	}
 
 	return &StmtExpression{Expression: value}, nil
+}
+
+func (p *Parser) blockStmt() (Stmt, error) {
+	statements := make([]Stmt, 0)
+	for !p.atEnd() && !p.check(RIGHT_BRACE) {
+		statement, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, statement)
+	}
+
+	_, err := p.consume(RIGHT_BRACE, "expect }")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtBlock{
+		Statements: statements,
+	}, nil
 }
 
 //

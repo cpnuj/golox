@@ -149,5 +149,12 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "Block",
+		fields: []Field{
+			{"[]Stmt", "Statements"},
+		},
+	})
+
 	defineAST("Stmt", types)
 }
