@@ -28,7 +28,7 @@ type ExprVisitor interface {
 }
 
 type ExprLiteral struct{
-	Value Token
+	Value interface{}
 }
 
 func(node *ExprLiteral) Type() ExprType {
@@ -130,6 +130,7 @@ const (
 	StmtTypeVar
 	StmtTypeBlock
 	StmtTypeIf
+	StmtTypeWhile
 )
 
 type StmtVisitor interface {
@@ -138,6 +139,7 @@ type StmtVisitor interface {
 	VisitVar(*StmtVar) (interface{}, error)
 	VisitBlock(*StmtBlock) (interface{}, error)
 	VisitIf(*StmtIf) (interface{}, error)
+	VisitWhile(*StmtWhile) (interface{}, error)
 }
 
 type StmtExpression struct{
@@ -201,5 +203,18 @@ func(node *StmtIf) Type() StmtType {
 
 func(node *StmtIf) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitIf(node)
+}
+
+type StmtWhile struct{
+	Cond Expr
+	Body Stmt
+}
+
+func(node *StmtWhile) Type() StmtType {
+	return StmtTypeWhile
+}
+
+func(node *StmtWhile) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitWhile(node)
 }
 

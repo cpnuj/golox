@@ -111,7 +111,7 @@ func (i *Interpreter) eval(expr Expr) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
-	return expr.Value.Value(), nil
+	return expr.Value, nil
 }
 
 func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
@@ -312,6 +312,23 @@ func (i *Interpreter) VisitIf(statement *StmtIf) (interface{}, error) {
 		return nil, i.execute(statement.Then)
 	} else if statement.Else != nil {
 		return nil, i.execute(statement.Else)
+	}
+	return nil, nil
+}
+
+func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
+	for {
+		cond, err := i.eval(statement.Cond)
+		if err != nil {
+			return nil, err
+		}
+		if !isTruthy(cond) {
+			break
+		}
+		err = i.execute(statement.Body)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }

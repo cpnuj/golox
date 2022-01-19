@@ -76,7 +76,9 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 // statement      → exprStmt
 //                | printStmt
 //                | blockStmt
-//                | ifStmt ;
+//                | ifStmt
+//                | whileStmt
+//                | forStmt ;
 //
 // exprStmt       → expression ";" ;
 //
@@ -85,6 +87,10 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 // blockStmt      → "{" declaration* "}" ;
 //
 // ifStmt         → "if" "(" expression ")" statement ("else" statement)? ;
+//
+// whileStmt      → "while" "(" expression ")" statement;
+//
+// forStmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -137,6 +143,12 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 	if p.match(IF) {
 		return p.ifStmt()
+	}
+	if p.match(WHILE) {
+		return p.whileStmt()
+	}
+	if p.match(FOR) {
+		return p.forStmt()
 	}
 	return p.exprStmt()
 }
@@ -223,6 +235,115 @@ func (p *Parser) ifStmt() (Stmt, error) {
 		Then: thenBranch,
 		Else: elseBranch,
 	}, nil
+}
+
+func (p *Parser) whileStmt() (Stmt, error) {
+	_, err := p.consume(LEFT_PAREN, "expect ( after while")
+	if err != nil {
+		return nil, err
+	}
+
+	cond, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "expect )")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtWhile{
+		Cond: cond,
+		Body: body,
+	}, nil
+}
+
+func (p *Parser) forStmt() (Stmt, error) {
+	_, err := p.consume(LEFT_PAREN, "expect ( after for")
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer Stmt
+	if p.match(SEMICOLON) {
+		initializer = nil
+	} else if p.match(VAR) {
+		initializer, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		initializer, err = p.exprStmt()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var condition Expr
+	if !p.check(SEMICOLON) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(SEMICOLON, "expect ;")
+	if err != nil {
+		return nil, err
+	}
+
+	var increment Expr
+	if !p.check(RIGHT_PAREN) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "expect )")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	if increment != nil {
+		body = &StmtBlock{
+			Statements: []Stmt{
+				body,
+				&StmtExpression{increment},
+			},
+		}
+	}
+
+	if condition == nil {
+		condition = &ExprLiteral{true}
+	}
+
+	body = &StmtWhile{
+		Cond: condition,
+		Body: body,
+	}
+
+	if initializer != nil {
+		body = &StmtBlock{
+			Statements: []Stmt{
+				initializer,
+				body,
+			},
+		}
+	}
+
+	return body, nil
 }
 
 //
@@ -441,7 +562,7 @@ func (p *Parser) unary() (Expr, error) {
 
 func (p *Parser) primary() (Expr, error) {
 	if p.check(NUMBER, STRING, TRUE, FALSE, NIL) {
-		return &ExprLiteral{Value: p.advance()}, nil
+		return &ExprLiteral{Value: p.advance().Value()}, nil
 	}
 
 	if p.check(LEFT_PAREN) {

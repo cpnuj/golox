@@ -27,7 +27,7 @@ func stringify(a interface{}) string {
 }
 
 func (p *ExprPrintVisitor) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
-	return stringify(expr.Value.Value()), nil
+	return stringify(expr.Value), nil
 }
 
 func (p *ExprPrintVisitor) VisitVariable(expr *ExprVariable) (interface{}, error) {

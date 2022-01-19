@@ -80,7 +80,7 @@ func main() {
 	types = append(types, Type{
 		typename: "Literal",
 		fields: []Field{
-			{"Token", "Value"},
+			{"interface{}", "Value"},
 		},
 	})
 
@@ -171,6 +171,14 @@ func main() {
 			{"Expr", "Cond"},
 			{"Stmt", "Then"},
 			{"Stmt", "Else"},
+		},
+	})
+
+	types = append(types, Type{
+		typename: "While",
+		fields: []Field{
+			{"Expr", "Cond"},
+			{"Stmt", "Body"},
 		},
 	})
 
