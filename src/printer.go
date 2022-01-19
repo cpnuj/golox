@@ -74,3 +74,19 @@ func (p *ExprPrintVisitor) VisitBinary(expr *ExprBinary) (interface{}, error) {
 
 	return parenness(stringify(operator), stringify(left), stringify(right)), nil
 }
+
+func (p *ExprPrintVisitor) VisitLogical(expr *ExprLogical) (interface{}, error) {
+	operator := expr.Operator.Value()
+
+	left, err := expr.Left.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+
+	right, err := expr.Right.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return parenness(stringify(operator), stringify(left), stringify(right)), nil
+}

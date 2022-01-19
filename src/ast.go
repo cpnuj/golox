@@ -14,6 +14,7 @@ const (
 	ExprTypeUnary
 	ExprTypeGrouping
 	ExprTypeBinary
+	ExprTypeLogical
 )
 
 type ExprVisitor interface {
@@ -23,6 +24,7 @@ type ExprVisitor interface {
 	VisitUnary(*ExprUnary) (interface{}, error)
 	VisitGrouping(*ExprGrouping) (interface{}, error)
 	VisitBinary(*ExprBinary) (interface{}, error)
+	VisitLogical(*ExprLogical) (interface{}, error)
 }
 
 type ExprLiteral struct{
@@ -99,6 +101,20 @@ func(node *ExprBinary) Type() ExprType {
 
 func(node *ExprBinary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitBinary(node)
+}
+
+type ExprLogical struct{
+	Left Expr
+	Operator Token
+	Right Expr
+}
+
+func(node *ExprLogical) Type() ExprType {
+	return ExprTypeLogical
+}
+
+func(node *ExprLogical) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitLogical(node)
 }
 
 type Stmt interface {

@@ -96,15 +96,6 @@ func checkStringOperands(operands ...interface{}) bool {
 	return true
 }
 
-func checkBoolOperands(operands ...interface{}) bool {
-	for _, operand := range operands {
-		if _, ok := operand.(bool); !ok {
-			return false
-		}
-	}
-	return true
-}
-
 func isTruthy(obj interface{}) bool {
 	if obj == nil {
 		return false
@@ -237,21 +228,28 @@ func (i *Interpreter) VisitBinary(expr *ExprBinary) (interface{}, error) {
 		}
 		return nil, i.runtimeError(expr.Operator, "operands of != must be two numbers")
 
-	// logic
-	case AND:
-		if checkBoolOperands(left, right) {
-			return left.(bool) && right.(bool), nil
-		}
-		return nil, i.runtimeError(expr.Operator, "operands of and must be two bools")
-	case OR:
-		if checkBoolOperands(left, right) {
-			return left.(bool) || right.(bool), nil
-		}
-		return nil, i.runtimeError(expr.Operator, "operands of or must be two bools")
-
 	default:
 		panic("golox error: invalid binary operator type")
 	}
+}
+
+func (i *Interpreter) VisitLogical(expr *ExprLogical) (interface{}, error) {
+	left, err := i.eval(expr.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	if expr.Operator.Type() == OR {
+		if isTruthy(left) {
+			return left, nil
+		}
+	} else {
+		if !isTruthy(left) {
+			return left, nil
+		}
+	}
+
+	return i.eval(expr.Right)
 }
 
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {

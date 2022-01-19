@@ -230,7 +230,9 @@ func (p *Parser) ifStmt() (Stmt, error) {
 //
 // expression     → assignment ;
 // assignment     → IDENTIFIER "=" assignment
-//                | equality ;
+//                | logic_or ;
+// logic_or       → logic_and ("or" logic_and)* ;
+// logic_and      → equality ("and" equality)* ;
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term           → factor ( ( "-" | "+" ) factor )* ;
@@ -247,7 +249,7 @@ func (p *Parser) expression() (Expr, error) {
 }
 
 func (p *Parser) assignment() (Expr, error) {
-	expr, err := p.equality()
+	expr, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -267,6 +269,54 @@ func (p *Parser) assignment() (Expr, error) {
 		expr = &ExprAssign{
 			Name:  left.Name,
 			Value: right,
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) or() (Expr, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.check(OR) {
+		operator := p.advance()
+
+		right, err := p.or()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ExprLogical{
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) and() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.check(AND) {
+		operator := p.advance()
+
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &ExprLogical{
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
 		}
 	}
 
