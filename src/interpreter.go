@@ -53,8 +53,12 @@ var (
 )
 
 func NewInterpreter() *Interpreter {
+	global := NewEnvironment(nil)
+	global.Define("clock", BuildinClock)
+	global.Define("sleep", BuildinSleep)
+
 	return &Interpreter{
-		environment: NewEnvironment(nil),
+		environment: global,
 	}
 }
 
@@ -250,6 +254,35 @@ func (i *Interpreter) VisitLogical(expr *ExprLogical) (interface{}, error) {
 	}
 
 	return i.eval(expr.Right)
+}
+
+func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
+	callee, err := i.eval(expr.Callee)
+	if err != nil {
+		return nil, err
+	}
+
+	function, callable := callee.(LoxCallable)
+	if !callable {
+		return nil, i.runtimeError(expr.Paren, "totally not a function")
+	}
+
+	args := make([]interface{}, 0)
+	for _, arg := range expr.Args {
+		value, err := i.eval(arg)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, value)
+	}
+
+	if len(args) > function.Arity() {
+		return nil, i.runtimeError(expr.Paren, "too many arguments")
+	} else if len(args) < function.Arity() {
+		return nil, i.runtimeError(expr.Paren, "too few arguments")
+	}
+
+	return function.Call(i, args)
 }
 
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {

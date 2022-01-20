@@ -359,10 +359,13 @@ func (p *Parser) forStmt() (Stmt, error) {
 // term           → factor ( ( "-" | "+" ) factor )* ;
 // factor         → unary ( ( "/" | "*" ) unary )* ;
 // unary          → ( "!" | "-" ) unary
-//                | primary ;
+//                | call ;
+// call           → primary ("(" arguments? ")")* ;
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
 //                | "(" expression ")"
 //                | IDENTIFIER ;
+//
+// arguments      → expression ("," expression)*
 //
 
 func (p *Parser) expression() (Expr, error) {
@@ -557,7 +560,30 @@ func (p *Parser) unary() (Expr, error) {
 		return expr, nil
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() (Expr, error) {
+	callee, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.check(LEFT_PAREN) {
+		paren := p.advance()
+		args, err := p.arguments()
+		if err != nil {
+			return nil, err
+		}
+
+		callee = &ExprCall{
+			Callee: callee,
+			Paren:  paren,
+			Args:   args,
+		}
+	}
+
+	return callee, nil
 }
 
 func (p *Parser) primary() (Expr, error) {
@@ -589,4 +615,33 @@ func (p *Parser) primary() (Expr, error) {
 
 	row, col := p.peek().Pos()
 	return nil, logger.NewError(row, col, "expect expression")
+}
+
+func (p *Parser) arguments() ([]Expr, error) {
+	// no args
+	args := make([]Expr, 0)
+	if p.match(RIGHT_PAREN) {
+		return args, nil
+	}
+
+	arg, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	args = append(args, arg)
+	for p.match(COMMA) {
+		arg, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, arg)
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "expect )")
+	if err != nil {
+		return nil, err
+	}
+
+	return args, nil
 }

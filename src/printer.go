@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -89,4 +90,8 @@ func (p *ExprPrintVisitor) VisitLogical(expr *ExprLogical) (interface{}, error) 
 	}
 
 	return parenness(stringify(operator), stringify(left), stringify(right)), nil
+}
+
+func (p *ExprPrintVisitor) VisitCall(expr *ExprCall) (interface{}, error) {
+	return nil, errors.New("unimplemented")
 }

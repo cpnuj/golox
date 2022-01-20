@@ -6,6 +6,7 @@ type Expr interface {
 }
 
 type ExprType int32
+
 const (
 	ExprTypeIdle = iota
 	ExprTypeLiteral
@@ -15,6 +16,7 @@ const (
 	ExprTypeGrouping
 	ExprTypeBinary
 	ExprTypeLogical
+	ExprTypeCall
 )
 
 type ExprVisitor interface {
@@ -25,96 +27,111 @@ type ExprVisitor interface {
 	VisitGrouping(*ExprGrouping) (interface{}, error)
 	VisitBinary(*ExprBinary) (interface{}, error)
 	VisitLogical(*ExprLogical) (interface{}, error)
+	VisitCall(*ExprCall) (interface{}, error)
 }
 
-type ExprLiteral struct{
+type ExprLiteral struct {
 	Value interface{}
 }
 
-func(node *ExprLiteral) Type() ExprType {
+func (node *ExprLiteral) Type() ExprType {
 	return ExprTypeLiteral
 }
 
-func(node *ExprLiteral) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprLiteral) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitLiteral(node)
 }
 
-type ExprVariable struct{
+type ExprVariable struct {
 	Name Token
 }
 
-func(node *ExprVariable) Type() ExprType {
+func (node *ExprVariable) Type() ExprType {
 	return ExprTypeVariable
 }
 
-func(node *ExprVariable) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprVariable) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitVariable(node)
 }
 
-type ExprAssign struct{
-	Name Token
+type ExprAssign struct {
+	Name  Token
 	Value Expr
 }
 
-func(node *ExprAssign) Type() ExprType {
+func (node *ExprAssign) Type() ExprType {
 	return ExprTypeAssign
 }
 
-func(node *ExprAssign) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprAssign) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitAssign(node)
 }
 
-type ExprUnary struct{
+type ExprUnary struct {
 	UnaryOperator Token
-	Expression Expr
+	Expression    Expr
 }
 
-func(node *ExprUnary) Type() ExprType {
+func (node *ExprUnary) Type() ExprType {
 	return ExprTypeUnary
 }
 
-func(node *ExprUnary) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprUnary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitUnary(node)
 }
 
-type ExprGrouping struct{
+type ExprGrouping struct {
 	Expression Expr
 }
 
-func(node *ExprGrouping) Type() ExprType {
+func (node *ExprGrouping) Type() ExprType {
 	return ExprTypeGrouping
 }
 
-func(node *ExprGrouping) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprGrouping) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitGrouping(node)
 }
 
-type ExprBinary struct{
-	Left Expr
+type ExprBinary struct {
+	Left     Expr
 	Operator Token
-	Right Expr
+	Right    Expr
 }
 
-func(node *ExprBinary) Type() ExprType {
+func (node *ExprBinary) Type() ExprType {
 	return ExprTypeBinary
 }
 
-func(node *ExprBinary) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprBinary) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitBinary(node)
 }
 
-type ExprLogical struct{
-	Left Expr
+type ExprLogical struct {
+	Left     Expr
 	Operator Token
-	Right Expr
+	Right    Expr
 }
 
-func(node *ExprLogical) Type() ExprType {
+func (node *ExprLogical) Type() ExprType {
 	return ExprTypeLogical
 }
 
-func(node *ExprLogical) Accept(v ExprVisitor) (interface{}, error) {
+func (node *ExprLogical) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitLogical(node)
+}
+
+type ExprCall struct {
+	Callee Expr
+	Paren  Token
+	Args   []Expr
+}
+
+func (node *ExprCall) Type() ExprType {
+	return ExprTypeCall
+}
+
+func (node *ExprCall) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitCall(node)
 }
 
 type Stmt interface {
@@ -123,6 +140,7 @@ type Stmt interface {
 }
 
 type StmtType int32
+
 const (
 	StmtTypeIdle = iota
 	StmtTypeExpression
@@ -142,79 +160,78 @@ type StmtVisitor interface {
 	VisitWhile(*StmtWhile) (interface{}, error)
 }
 
-type StmtExpression struct{
+type StmtExpression struct {
 	Expression Expr
 }
 
-func(node *StmtExpression) Type() StmtType {
+func (node *StmtExpression) Type() StmtType {
 	return StmtTypeExpression
 }
 
-func(node *StmtExpression) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtExpression) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitExpression(node)
 }
 
-type StmtPrint struct{
+type StmtPrint struct {
 	Expression Expr
 }
 
-func(node *StmtPrint) Type() StmtType {
+func (node *StmtPrint) Type() StmtType {
 	return StmtTypePrint
 }
 
-func(node *StmtPrint) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtPrint) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitPrint(node)
 }
 
-type StmtVar struct{
-	Name Token
+type StmtVar struct {
+	Name        Token
 	Initializer Expr
 }
 
-func(node *StmtVar) Type() StmtType {
+func (node *StmtVar) Type() StmtType {
 	return StmtTypeVar
 }
 
-func(node *StmtVar) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtVar) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitVar(node)
 }
 
-type StmtBlock struct{
+type StmtBlock struct {
 	Statements []Stmt
 }
 
-func(node *StmtBlock) Type() StmtType {
+func (node *StmtBlock) Type() StmtType {
 	return StmtTypeBlock
 }
 
-func(node *StmtBlock) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtBlock) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitBlock(node)
 }
 
-type StmtIf struct{
+type StmtIf struct {
 	Cond Expr
 	Then Stmt
 	Else Stmt
 }
 
-func(node *StmtIf) Type() StmtType {
+func (node *StmtIf) Type() StmtType {
 	return StmtTypeIf
 }
 
-func(node *StmtIf) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtIf) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitIf(node)
 }
 
-type StmtWhile struct{
+type StmtWhile struct {
 	Cond Expr
 	Body Stmt
 }
 
-func(node *StmtWhile) Type() StmtType {
+func (node *StmtWhile) Type() StmtType {
 	return StmtTypeWhile
 }
 
-func(node *StmtWhile) Accept(v StmtVisitor) (interface{}, error) {
+func (node *StmtWhile) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitWhile(node)
 }
-

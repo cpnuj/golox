@@ -132,6 +132,15 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "Call",
+		fields: []Field{
+			{"Expr", "Callee"},
+			{"Token", "Paren"},
+			{"[]Expr", "Args"},
+		},
+	})
+
 	defineAST("Expr", types)
 
 	types = []Type{}
