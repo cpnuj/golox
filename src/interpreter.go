@@ -317,23 +317,27 @@ func (i *Interpreter) VisitVar(statement *StmtVar) (interface{}, error) {
 	return nil, nil
 }
 
-func (i *Interpreter) VisitBlock(statement *StmtBlock) (interface{}, error) {
+func (i *Interpreter) execBlock(statements []Stmt, env *Environment) (interface{}, error) {
 	// enter new environment
 	previous := i.environment
-	i.environment = NewEnvironment(previous)
+	i.environment = env
 
 	// back to old environment
 	defer func() {
 		i.environment = previous
 	}()
 
-	for _, stmt := range statement.Statements {
-		if err := i.execute(stmt); err != nil {
+	for _, statement := range statements {
+		if err := i.execute(statement); err != nil {
 			return nil, err
 		}
 	}
 
 	return nil, nil
+}
+
+func (i *Interpreter) VisitBlock(statement *StmtBlock) (interface{}, error) {
+	return i.execBlock(statement.Statements, NewEnvironment(i.environment))
 }
 
 func (i *Interpreter) VisitIf(statement *StmtIf) (interface{}, error) {
@@ -363,5 +367,12 @@ func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
 			return nil, err
 		}
 	}
+	return nil, nil
+}
+
+func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
+	i.environment.Define(statement.Name, &LoxFunction{
+		definition: *statement,
+	})
 	return nil, nil
 }

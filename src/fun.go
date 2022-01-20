@@ -47,3 +47,21 @@ var BuildinSleep *BuildinFun = &BuildinFun{
 		return nil, nil
 	},
 }
+
+// user defined funtion
+type LoxFunction struct {
+	definition StmtFun
+}
+
+func (f *LoxFunction) Arity() int {
+	return len(f.definition.Params)
+}
+
+func (f *LoxFunction) Call(i *Interpreter, args []interface{}) (interface{}, error) {
+	env := NewEnvironment(i.environment)
+	params := f.definition.Params
+	for i := range args {
+		env.Define(params[i], args[i])
+	}
+	return i.execBlock(f.definition.Body, env)
+}

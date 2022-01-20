@@ -191,5 +191,14 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "Fun",
+		fields: []Field{
+			{"string", "Name"},
+			{"[]string", "Params"},
+			{"[]Stmt", "Body"},
+		},
+	})
+
 	defineAST("Stmt", types)
 }

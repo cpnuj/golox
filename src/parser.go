@@ -69,9 +69,14 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 // program        → declaration* EOF ;
 //
 // declaration    → varDecl
+//                → funDecl
 //                | statement ;
 //
 // varDecl        → VAR IDENTIFIER "=" expression ;
+//
+// funDecl        → "fun" function ;
+// function       → IDENTIFIER "(" parameters? ")" blockStmt ;
+// parameters     → IDENTIFIER ("," IDENTIFIER)* ;
 //
 // statement      → exprStmt
 //                | printStmt
@@ -109,6 +114,9 @@ func (p *Parser) declaration() (Stmt, error) {
 	if p.match(VAR) {
 		return p.varDeclaration()
 	}
+	if p.match(FUN) {
+		return p.funDecl()
+	}
 	return p.statement()
 }
 
@@ -132,6 +140,67 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 	}
 
 	return &StmtVar{Name: name, Initializer: initializer}, nil
+}
+
+func (p *Parser) funDecl() (Stmt, error) {
+	value, err := p.consume(IDENTIFIER, "expect identifier")
+	if err != nil {
+		return nil, err
+	}
+
+	name := value.Value().(string)
+
+	_, err = p.consume(LEFT_PAREN, "expect (")
+	if err != nil {
+		return nil, err
+	}
+
+	var params []string
+	if p.check(RIGHT_PAREN) {
+		params = make([]string, 0)
+	} else {
+		params, err = p.parameters()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "expect )")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LEFT_BRACE, "expect {")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.blockStmt()
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtFun{
+		Name:   name,
+		Params: params,
+		Body:   body.(*StmtBlock).Statements,
+	}, nil
+}
+
+func (p *Parser) parameters() ([]string, error) {
+	params := make([]string, 0)
+	for {
+		param, err := p.consume(IDENTIFIER, "expect identifier")
+		if err != nil {
+			return nil, err
+		}
+
+		params = append(params, param.Value().(string))
+		if !p.match(COMMA) {
+			break
+		}
+	}
+	return params, nil
 }
 
 func (p *Parser) statement() (Stmt, error) {
