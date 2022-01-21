@@ -110,6 +110,7 @@ func (p *Parser) Parse() ([]Stmt, error) {
 		}
 		statements = append(statements, statement)
 	}
+	NewAstPrinter().Print(statements)
 	return statements, nil
 }
 
