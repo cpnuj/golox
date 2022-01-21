@@ -83,7 +83,8 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //                | blockStmt
 //                | ifStmt
 //                | whileStmt
-//                | forStmt ;
+//                | forStmt
+//                | returnStmt ;
 //
 // exprStmt       → expression ";" ;
 //
@@ -96,6 +97,8 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 // whileStmt      → "while" "(" expression ")" statement;
 //
 // forStmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement ;
+//
+// returnStmt     → "return" expression? ";" ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -218,6 +221,9 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 	if p.match(FOR) {
 		return p.forStmt()
+	}
+	if p.match(RETURN) {
+		return p.returnStmt()
 	}
 	return p.exprStmt()
 }
@@ -413,6 +419,29 @@ func (p *Parser) forStmt() (Stmt, error) {
 	}
 
 	return body, nil
+}
+
+func (p *Parser) returnStmt() (Stmt, error) {
+	keyword := p.previous()
+
+	var expr Expr
+	var err error
+	if !p.check(SEMICOLON) {
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(SEMICOLON, "expect ;")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtReturn{
+		Keyword: keyword,
+		Value:   expr,
+	}, nil
 }
 
 //

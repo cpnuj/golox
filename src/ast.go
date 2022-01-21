@@ -150,6 +150,7 @@ const (
 	StmtTypeIf
 	StmtTypeWhile
 	StmtTypeFun
+	StmtTypeReturn
 )
 
 type StmtVisitor interface {
@@ -160,6 +161,7 @@ type StmtVisitor interface {
 	VisitIf(*StmtIf) (interface{}, error)
 	VisitWhile(*StmtWhile) (interface{}, error)
 	VisitFun(*StmtFun) (interface{}, error)
+	VisitReturn(*StmtReturn) (interface{}, error)
 }
 
 type StmtExpression struct {
@@ -250,4 +252,17 @@ func (node *StmtFun) Type() StmtType {
 
 func (node *StmtFun) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitFun(node)
+}
+
+type StmtReturn struct {
+	Keyword Token
+	Value   Expr
+}
+
+func (node *StmtReturn) Type() StmtType {
+	return StmtTypeReturn
+}
+
+func (node *StmtReturn) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitReturn(node)
 }

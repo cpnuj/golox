@@ -50,7 +50,15 @@ var BuildinSleep *BuildinFun = &BuildinFun{
 
 // user defined funtion
 type LoxFunction struct {
-	definition StmtFun
+	definition *StmtFun
+	closure    *Environment
+}
+
+func NewLoxFunction(definition *StmtFun, closure *Environment) *LoxFunction {
+	return &LoxFunction{
+		definition: definition,
+		closure:    closure,
+	}
 }
 
 func (f *LoxFunction) Arity() int {
@@ -58,10 +66,21 @@ func (f *LoxFunction) Arity() int {
 }
 
 func (f *LoxFunction) Call(i *Interpreter, args []interface{}) (interface{}, error) {
-	env := NewEnvironment(i.environment)
+	env := NewEnvironment(f.closure)
 	params := f.definition.Params
 	for i := range args {
 		env.Define(params[i], args[i])
 	}
-	return i.execBlock(f.definition.Body, env)
+
+	// catch return value
+	_, err := i.execBlock(f.definition.Body, env)
+	if err != nil {
+		if retval, ok := err.(*Return); ok {
+			return retval.Value(), nil
+		} else {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }

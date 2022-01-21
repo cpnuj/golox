@@ -200,5 +200,13 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "Return",
+		fields: []Field{
+			{"Token", "Keyword"},
+			{"Expr", "Value"},
+		},
+	})
+
 	defineAST("Stmt", types)
 }

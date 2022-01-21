@@ -371,8 +371,28 @@ func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
-	i.environment.Define(statement.Name, &LoxFunction{
-		definition: *statement,
-	})
+	i.environment.Define(statement.Name, NewLoxFunction(statement, i.environment))
 	return nil, nil
+}
+
+// Return implements the error interface, and throwed in VisitReturn.
+// Should be caught at LoxFunction.Call
+type Return struct {
+	value interface{}
+}
+
+func (r *Return) Value() interface{} {
+	return r.value
+}
+
+func (r *Return) Error() string {
+	return ""
+}
+
+func (i *Interpreter) VisitReturn(statement *StmtReturn) (interface{}, error) {
+	value, err := i.eval(statement.Value)
+	if err != nil {
+		return nil, err
+	}
+	return nil, &Return{value: value}
 }
