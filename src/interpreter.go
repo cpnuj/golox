@@ -18,33 +18,35 @@ func (env *Environment) Define(name string, value interface{}) {
 	env.values[name] = value
 }
 
-func (env *Environment) Set(name string, value interface{}) bool {
+func (env *Environment) Set(name string, depth int, value interface{}) bool {
+	if depth > 0 {
+		return env.parent.Set(name, depth-1, value)
+	}
+
 	if _, found := env.values[name]; found {
 		env.values[name] = value
 		return true
 	}
 
-	if env.parent != nil {
-		return env.parent.Set(name, value)
-	}
-
 	return false
 }
 
-func (env *Environment) Get(name string) (interface{}, bool) {
-	if value, found := env.values[name]; found {
-		return value, true
+func (env *Environment) Get(name string, depth int) (interface{}, bool) {
+	if depth > 0 {
+		return env.parent.Get(name, depth-1)
 	}
 
-	if env.parent != nil {
-		return env.parent.Get(name)
+	if value, found := env.values[name]; found {
+		return value, true
 	}
 
 	return nil, false
 }
 
 type Interpreter struct {
-	environment *Environment
+	globalEnv *Environment
+	localEnv  *Environment
+	locals    map[Expr]int
 }
 
 var (
@@ -58,7 +60,8 @@ func NewInterpreter() *Interpreter {
 	global.Define("sleep", BuildinSleep)
 
 	return &Interpreter{
-		environment: global,
+		globalEnv: global,
+		localEnv:  NewEnvironment(nil),
 	}
 }
 
@@ -70,6 +73,10 @@ func (i *Interpreter) Interprete(statements []Stmt) error {
 		}
 	}
 	return nil
+}
+
+func (i *Interpreter) SetLocals(locals map[Expr]int) {
+	i.locals = locals
 }
 
 func (i *Interpreter) execute(statement Stmt) error {
@@ -120,11 +127,22 @@ func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 
 func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
 	name := expr.Name.Value().(string)
-	value, ok := i.environment.Get(name)
-	if !ok {
-		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+
+	// defined in local
+	if depth, ok := i.locals[expr]; ok {
+		value, ok := i.localEnv.Get(name, depth)
+		if !ok {
+			return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+		}
+		return value, nil
 	}
-	return value, nil
+
+	// search in global
+	if value, ok := i.globalEnv.Get(name, 0); ok {
+		return value, nil
+	}
+
+	return nil, i.runtimeError(expr.Name, "undefined variable "+name)
 }
 
 func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
@@ -134,11 +152,20 @@ func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
 		return nil, err
 	}
 
-	if ok := i.environment.Set(name, value); !ok {
-		return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+	// defined in local
+	if depth, ok := i.locals[expr]; ok {
+		if ok := i.localEnv.Set(name, depth, value); !ok {
+			return nil, i.runtimeError(expr.Name, "Lox Error: undefined variable "+name)
+		}
+		return value, nil
 	}
 
-	return value, nil
+	// search in global
+	if ok := i.globalEnv.Set(name, 0, value); ok {
+		return value, nil
+	}
+
+	return nil, i.runtimeError(expr.Name, "Lox Error: undefined variable "+name)
 }
 
 func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
@@ -312,19 +339,19 @@ func (i *Interpreter) VisitVar(statement *StmtVar) (interface{}, error) {
 		}
 	}
 
-	i.environment.Define(name, initializer)
+	i.localEnv.Define(name, initializer)
 
 	return nil, nil
 }
 
 func (i *Interpreter) execBlock(statements []Stmt, env *Environment) (interface{}, error) {
 	// enter new environment
-	previous := i.environment
-	i.environment = env
+	previous := i.localEnv
+	i.localEnv = env
 
 	// back to old environment
 	defer func() {
-		i.environment = previous
+		i.localEnv = previous
 	}()
 
 	for _, statement := range statements {
@@ -337,7 +364,7 @@ func (i *Interpreter) execBlock(statements []Stmt, env *Environment) (interface{
 }
 
 func (i *Interpreter) VisitBlock(statement *StmtBlock) (interface{}, error) {
-	return i.execBlock(statement.Statements, NewEnvironment(i.environment))
+	return i.execBlock(statement.Statements, NewEnvironment(i.localEnv))
 }
 
 func (i *Interpreter) VisitIf(statement *StmtIf) (interface{}, error) {
@@ -371,7 +398,7 @@ func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
-	i.environment.Define(statement.Name, NewLoxFunction(statement, i.environment))
+	i.localEnv.Define(statement.Name, NewLoxFunction(statement, i.localEnv))
 	return nil, nil
 }
 

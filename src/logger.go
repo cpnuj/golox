@@ -8,7 +8,7 @@ import (
 
 // debug flags
 var lexdebug = 0   // lexer debug
-var parsedebug = 1 // parser debug
+var parsedebug = 0 // parser debug
 
 type Logger struct {
 	lines   []string
@@ -33,7 +33,7 @@ func (l *Logger) NewError(row, col int, errmsg string) error {
 		pointer += " "
 	}
 	pointer += "^"
-	return fmt.Errorf("error: %s\n%s\n%s\n", errmsg, lineMsg, pointer)
+	return fmt.Errorf("error: %s\n%s\n%s", errmsg, lineMsg, pointer)
 }
 
 func (l *Logger) DPrintf(dflag int, format string, a ...interface{}) {

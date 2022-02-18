@@ -28,6 +28,13 @@ func run(src string) error {
 		return err
 	}
 
+	resolver := NewResolver()
+	locals, err := resolver.Resolve(statements)
+	if err != nil {
+		return err
+	}
+
+	interpreter.SetLocals(locals)
 	return interpreter.Interprete(statements)
 }
 
@@ -60,7 +67,7 @@ func runPrompt() error {
 
 		err := run(s)
 		if err != nil {
-			fmt.Print(err)
+			fmt.Println(err)
 		}
 	}
 }
