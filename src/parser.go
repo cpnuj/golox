@@ -541,6 +541,7 @@ func (p *Parser) assignment() (Expr, error) {
 				Object: left.Object,
 				Field:  left.Field,
 				Value:  right,
+				Dot:    left.Dot,
 			}
 		default:
 			row, col := tk.Pos()
@@ -734,7 +735,7 @@ func (p *Parser) call() (Expr, error) {
 				Args:   args,
 			}
 		} else if p.check(DOT) {
-			p.advance()
+			dot := p.advance()
 			field, err := p.consume(IDENTIFIER, "expect identifier after dot")
 			if err != nil {
 				return nil, err
@@ -742,6 +743,7 @@ func (p *Parser) call() (Expr, error) {
 			callee = &ExprGet{
 				Object: callee,
 				Field:  field,
+				Dot:    dot,
 			}
 		} else {
 			break

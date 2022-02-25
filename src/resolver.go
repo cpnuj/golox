@@ -128,12 +128,13 @@ func (r *Resolver) VisitCall(expr *ExprCall) (interface{}, error) {
 }
 
 func (r *Resolver) VisitGet(expr *ExprGet) (interface{}, error) {
-	// do nothing
+	r.resolveExpr(expr.Object)
 	return nil, nil
 }
 
 func (r *Resolver) VisitSet(expr *ExprSet) (interface{}, error) {
-	// do nothing
+	r.resolveExpr(expr.Object)
+	r.resolveExpr(expr.Value)
 	return nil, nil
 }
 

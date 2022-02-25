@@ -23,13 +23,14 @@ func (class *LoxClass) Call(*Interpreter, []interface{}) (interface{}, error) {
 }
 
 type LoxInstance struct {
-	class *LoxClass
-	// fileds map[string]interface{}
+	class  *LoxClass
+	fileds map[string]interface{}
 }
 
 func NewLoxInstance(class *LoxClass) *LoxInstance {
 	return &LoxInstance{
-		class: class,
+		class:  class,
+		fileds: make(map[string]interface{}),
 	}
 }
 

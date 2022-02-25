@@ -313,13 +313,41 @@ func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
-	// todo
-	return nil, nil
+	value, err := i.eval(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, ok := value.(*LoxInstance)
+	if !ok {
+		return nil, i.runtimeError(expr.Dot, "only instances have fields")
+	}
+
+	filed := expr.Field.Value().(string)
+	if ret, ok := obj.fileds[filed]; ok {
+		return ret, nil
+	}
+	return nil, i.runtimeError(expr.Field, "no such field")
 }
 
 func (i *Interpreter) VisitSet(expr *ExprSet) (interface{}, error) {
-	// todo
-	return nil, nil
+	value, err := i.eval(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, ok := value.(*LoxInstance)
+	if !ok {
+		return nil, i.runtimeError(expr.Dot, "only instances have fields")
+	}
+
+	ret, err := i.eval(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+	filed := expr.Field.Value().(string)
+	obj.fileds[filed] = ret
+	return ret, nil
 }
 
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {

@@ -146,6 +146,7 @@ func main() {
 		fields: []Field{
 			{"Expr", "Object"},
 			{"Token", "Field"},
+			{"Token", "Dot"},
 		},
 	})
 
@@ -155,6 +156,7 @@ func main() {
 			{"Expr", "Object"},
 			{"Token", "Field"},
 			{"Expr", "Value"},
+			{"Token", "Dot"},
 		},
 	})
 

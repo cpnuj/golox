@@ -141,6 +141,7 @@ func (node *ExprCall) Accept(v ExprVisitor) (interface{}, error) {
 type ExprGet struct {
 	Object Expr
 	Field  Token
+	Dot    Token
 }
 
 func (node *ExprGet) Type() ExprType {
@@ -155,6 +156,7 @@ type ExprSet struct {
 	Object Expr
 	Field  Token
 	Value  Expr
+	Dot    Token
 }
 
 func (node *ExprSet) Type() ExprType {
