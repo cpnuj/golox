@@ -8,9 +8,11 @@ import (
 )
 
 var interpreter *Interpreter
+var resolver *Resolver
 
 func init() {
 	interpreter = NewInterpreter()
+	resolver = NewResolver()
 }
 
 func run(src string) error {
@@ -28,7 +30,6 @@ func run(src string) error {
 		return err
 	}
 
-	resolver := NewResolver()
 	locals, err := resolver.Resolve(statements)
 	if err != nil {
 		return err
