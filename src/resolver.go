@@ -127,6 +127,16 @@ func (r *Resolver) VisitCall(expr *ExprCall) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitGet(expr *ExprGet) (interface{}, error) {
+	// do nothing
+	return nil, nil
+}
+
+func (r *Resolver) VisitSet(expr *ExprSet) (interface{}, error) {
+	// do nothing
+	return nil, nil
+}
+
 func (r *Resolver) VisitExpression(stmt *StmtExpression) (interface{}, error) {
 	return r.resolveExpr(stmt.Expression)
 }
@@ -201,4 +211,10 @@ func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
 
 func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 	return r.resolveExpr(stmt.Value)
+}
+
+func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
+	r.declare(stmt.Name)
+	r.define(stmt.Name)
+	return nil, nil
 }

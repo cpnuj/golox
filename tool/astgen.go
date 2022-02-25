@@ -141,6 +141,23 @@ func main() {
 		},
 	})
 
+	types = append(types, Type{
+		typename: "Get",
+		fields: []Field{
+			{"Expr", "Object"},
+			{"Token", "Field"},
+		},
+	})
+
+	types = append(types, Type{
+		typename: "Set",
+		fields: []Field{
+			{"Expr", "Object"},
+			{"Token", "Field"},
+			{"Expr", "Value"},
+		},
+	})
+
 	defineAST("Expr", types)
 
 	types = []Type{}
@@ -205,6 +222,14 @@ func main() {
 		fields: []Field{
 			{"Token", "Keyword"},
 			{"Expr", "Value"},
+		},
+	})
+
+	types = append(types, Type{
+		typename: "Class",
+		fields: []Field{
+			{"string", "Name"},
+			{"[]*StmtFun", "Methods"},
 		},
 	})
 

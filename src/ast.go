@@ -17,6 +17,8 @@ const (
 	ExprTypeBinary
 	ExprTypeLogical
 	ExprTypeCall
+	ExprTypeGet
+	ExprTypeSet
 )
 
 type ExprVisitor interface {
@@ -28,6 +30,8 @@ type ExprVisitor interface {
 	VisitBinary(*ExprBinary) (interface{}, error)
 	VisitLogical(*ExprLogical) (interface{}, error)
 	VisitCall(*ExprCall) (interface{}, error)
+	VisitGet(*ExprGet) (interface{}, error)
+	VisitSet(*ExprSet) (interface{}, error)
 }
 
 type ExprLiteral struct {
@@ -134,6 +138,33 @@ func (node *ExprCall) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitCall(node)
 }
 
+type ExprGet struct {
+	Object Expr
+	Field  Token
+}
+
+func (node *ExprGet) Type() ExprType {
+	return ExprTypeGet
+}
+
+func (node *ExprGet) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitGet(node)
+}
+
+type ExprSet struct {
+	Object Expr
+	Field  Token
+	Value  Expr
+}
+
+func (node *ExprSet) Type() ExprType {
+	return ExprTypeSet
+}
+
+func (node *ExprSet) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitSet(node)
+}
+
 type Stmt interface {
 	Type() StmtType
 	Accept(StmtVisitor) (interface{}, error)
@@ -151,6 +182,7 @@ const (
 	StmtTypeWhile
 	StmtTypeFun
 	StmtTypeReturn
+	StmtTypeClass
 )
 
 type StmtVisitor interface {
@@ -162,6 +194,7 @@ type StmtVisitor interface {
 	VisitWhile(*StmtWhile) (interface{}, error)
 	VisitFun(*StmtFun) (interface{}, error)
 	VisitReturn(*StmtReturn) (interface{}, error)
+	VisitClass(*StmtClass) (interface{}, error)
 }
 
 type StmtExpression struct {
@@ -265,4 +298,17 @@ func (node *StmtReturn) Type() StmtType {
 
 func (node *StmtReturn) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitReturn(node)
+}
+
+type StmtClass struct {
+	Name    string
+	Methods []*StmtFun
+}
+
+func (node *StmtClass) Type() StmtType {
+	return StmtTypeClass
+}
+
+func (node *StmtClass) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitClass(node)
 }

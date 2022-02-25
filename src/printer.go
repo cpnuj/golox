@@ -299,6 +299,40 @@ func (p *AstPrinter) VisitCall(expr *ExprCall) (interface{}, error) {
 	return t, nil
 }
 
+func (p *AstPrinter) VisitGet(expr *ExprGet) (interface{}, error) {
+	t := NewTree("Get")
+
+	obj, err := p.BuildExpr(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+	t.AddTree(obj)
+
+	t.Add(expr.Field.Value().(string))
+
+	return t, nil
+}
+
+func (p *AstPrinter) VisitSet(expr *ExprSet) (interface{}, error) {
+	t := NewTree("Set")
+
+	obj, err := p.BuildExpr(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+	t.AddTree(obj)
+
+	t.Add(expr.Field.Value().(string))
+
+	value, err := p.BuildExpr(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+	t.AddTree(value)
+
+	return t, nil
+}
+
 func (p *AstPrinter) VisitExpression(stmt *StmtExpression) (interface{}, error) {
 	t, err := p.BuildExpr(stmt.Expression)
 	if err != nil {
@@ -424,5 +458,21 @@ func (p *AstPrinter) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 		return nil, err
 	}
 	t.AddTree(value)
+	return t, nil
+}
+
+func (p *AstPrinter) VisitClass(stmt *StmtClass) (interface{}, error) {
+	t := NewTree("class")
+	t.Add(stmt.Name)
+
+	methods := t.Add("methods")
+	for _, method := range stmt.Methods {
+		fun, err := p.BuildStmt(method)
+		if err != nil {
+			return nil, err
+		}
+		methods.AddTree(fun)
+	}
+
 	return t, nil
 }

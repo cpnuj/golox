@@ -84,7 +84,8 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //                | ifStmt
 //                | whileStmt
 //                | forStmt
-//                | returnStmt ;
+//                | returnStmt
+//                | classStmt;
 //
 // exprStmt       → expression ";" ;
 //
@@ -99,6 +100,8 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 // forStmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement ;
 //
 // returnStmt     → "return" expression? ";" ;
+//
+// classStmt      → "class" IDENTIFIER "{" function* "}" ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -225,6 +228,9 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 	if p.match(RETURN) {
 		return p.returnStmt()
+	}
+	if p.match(CLASS) {
+		return p.classStmt()
 	}
 	return p.exprStmt()
 }
@@ -445,11 +451,49 @@ func (p *Parser) returnStmt() (Stmt, error) {
 	}, nil
 }
 
+func (p *Parser) classStmt() (Stmt, error) {
+	token, err := p.consume(IDENTIFIER, "expect indentifier")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LEFT_BRACE, "expect {")
+	if err != nil {
+		return nil, err
+	}
+
+	methods := make([]*StmtFun, 0)
+	for !p.check(RIGHT_BRACE) && !p.atEnd() {
+		fun, err := p.funDecl()
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: error to logger
+		funNode, ok := fun.(*StmtFun)
+		if !ok {
+			panic("Programming error: Expect type StmtFun")
+		}
+
+		methods = append(methods, funNode)
+	}
+
+	_, err = p.consume(RIGHT_BRACE, "expect }")
+	if err != nil {
+		return nil, err
+	}
+
+	return &StmtClass{
+		Name:    token.lexeme,
+		Methods: methods,
+	}, nil
+}
+
 //
 // CFG for expression:
 //
 // expression     → assignment ;
-// assignment     → IDENTIFIER "=" assignment
+// assignment     → ( call "." )? IDENTIFIER "=" assignment ;
 //                | logic_or ;
 // logic_or       → logic_and ("or" logic_and)* ;
 // logic_and      → equality ("and" equality)* ;
@@ -459,7 +503,7 @@ func (p *Parser) returnStmt() (Stmt, error) {
 // factor         → unary ( ( "/" | "*" ) unary )* ;
 // unary          → ( "!" | "-" ) unary
 //                | call ;
-// call           → primary ("(" arguments? ")")* ;
+// call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
 //                | "(" expression ")"
 //                | IDENTIFIER ;
@@ -478,20 +522,29 @@ func (p *Parser) assignment() (Expr, error) {
 	}
 
 	if p.match(EQUAL) {
-		left, ok := expr.(*ExprVariable)
-		if !ok {
-			row, col := p.previous().Pos()
-			return nil, logger.NewError(row, col, "invalid assign target")
-		}
+		// record position of token "=" to report error
+		tk := p.previous()
 
 		right, err := p.assignment()
 		if err != nil {
 			return nil, err
 		}
 
-		expr = &ExprAssign{
-			Name:  left.Name,
-			Value: right,
+		switch left := expr.(type) {
+		case *ExprVariable:
+			expr = &ExprAssign{
+				Name:  left.Name,
+				Value: right,
+			}
+		case *ExprGet:
+			expr = &ExprSet{
+				Object: left.Object,
+				Field:  left.Field,
+				Value:  right,
+			}
+		default:
+			row, col := tk.Pos()
+			return nil, logger.NewError(row, col, "invalid assign target")
 		}
 	}
 
@@ -668,17 +721,30 @@ func (p *Parser) call() (Expr, error) {
 		return nil, err
 	}
 
-	for p.check(LEFT_PAREN) {
-		paren := p.advance()
-		args, err := p.arguments()
-		if err != nil {
-			return nil, err
-		}
-
-		callee = &ExprCall{
-			Callee: callee,
-			Paren:  paren,
-			Args:   args,
+	for {
+		if p.check(LEFT_PAREN) {
+			paren := p.advance()
+			args, err := p.arguments()
+			if err != nil {
+				return nil, err
+			}
+			callee = &ExprCall{
+				Callee: callee,
+				Paren:  paren,
+				Args:   args,
+			}
+		} else if p.check(DOT) {
+			p.advance()
+			field, err := p.consume(IDENTIFIER, "expect identifier after dot")
+			if err != nil {
+				return nil, err
+			}
+			callee = &ExprGet{
+				Object: callee,
+				Field:  field,
+			}
+		} else {
+			break
 		}
 	}
 

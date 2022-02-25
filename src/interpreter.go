@@ -312,6 +312,16 @@ func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
 	return function.Call(i, args)
 }
 
+func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
+	// todo
+	return nil, nil
+}
+
+func (i *Interpreter) VisitSet(expr *ExprSet) (interface{}, error) {
+	// todo
+	return nil, nil
+}
+
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {
 	return i.eval(statement.Expression)
 }
@@ -422,4 +432,10 @@ func (i *Interpreter) VisitReturn(statement *StmtReturn) (interface{}, error) {
 		return nil, err
 	}
 	return nil, &Return{value: value}
+}
+
+func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
+	obj := NewLoxClass(statement)
+	i.localEnv.Define(statement.Name, obj)
+	return obj, nil
 }
