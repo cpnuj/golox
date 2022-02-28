@@ -19,11 +19,24 @@ func NewLoxClass(def *StmtClass) *LoxClass {
 }
 
 func (class *LoxClass) Arity() int {
-	return 0
+	init := class.FindMethod("init")
+	if init == nil {
+		return 0
+	}
+	return init.Arity()
 }
 
-func (class *LoxClass) Call(*Interpreter, []interface{}) (interface{}, error) {
-	return NewLoxInstance(class), nil
+func (class *LoxClass) Call(i *Interpreter, args []interface{}) (interface{}, error) {
+	instance := NewLoxInstance(class)
+	init := class.FindMethod("init")
+	if init == nil {
+		return instance, nil
+	}
+	bind(init, instance)
+	if _, err := init.Call(i, args); err != nil {
+		return nil, err
+	}
+	return instance, nil
 }
 
 func (class *LoxClass) DefineMethod(name string, fn *LoxFunction) {
