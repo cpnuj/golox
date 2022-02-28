@@ -333,6 +333,10 @@ func (p *AstPrinter) VisitSet(expr *ExprSet) (interface{}, error) {
 	return t, nil
 }
 
+func (p *AstPrinter) VisitThis(expr *ExprThis) (interface{}, error) {
+	return NewTree("this"), nil
+}
+
 func (p *AstPrinter) VisitExpression(stmt *StmtExpression) (interface{}, error) {
 	t, err := p.BuildExpr(stmt.Expression)
 	if err != nil {

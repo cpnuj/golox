@@ -19,6 +19,7 @@ const (
 	ExprTypeCall
 	ExprTypeGet
 	ExprTypeSet
+	ExprTypeThis
 )
 
 type ExprVisitor interface {
@@ -32,6 +33,7 @@ type ExprVisitor interface {
 	VisitCall(*ExprCall) (interface{}, error)
 	VisitGet(*ExprGet) (interface{}, error)
 	VisitSet(*ExprSet) (interface{}, error)
+	VisitThis(*ExprThis) (interface{}, error)
 }
 
 type ExprLiteral struct {
@@ -165,6 +167,18 @@ func (node *ExprSet) Type() ExprType {
 
 func (node *ExprSet) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitSet(node)
+}
+
+type ExprThis struct {
+	Keyword Token
+}
+
+func (node *ExprThis) Type() ExprType {
+	return ExprTypeThis
+}
+
+func (node *ExprThis) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitThis(node)
 }
 
 type Stmt interface {

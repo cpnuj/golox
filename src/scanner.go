@@ -462,7 +462,7 @@ func (s *Scanner) keywordOrIdent() {
 		case FALSE:
 			s.addToken(FALSE, false)
 		default:
-			s.addToken(token, nil)
+			s.addToken(token, s.lexeme())
 		}
 	} else {
 		s.addToken(IDENTIFIER, s.lexeme())

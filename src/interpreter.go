@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Environment struct {
 	parent *Environment
@@ -312,6 +314,13 @@ func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
 	return function.Call(i, args)
 }
 
+// bind binds a class method to an instance of the class
+func bind(method *LoxFunction, instance *LoxInstance) bool {
+	// The this variable must be defined in the closure's parent environment
+	// if the method is a valid class method.
+	return method.closure.Set("this", 1, instance)
+}
+
 func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
 	value, err := i.eval(expr.Object)
 	if err != nil {
@@ -326,6 +335,12 @@ func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
 	filed := expr.Field.Value().(string)
 	if ret, ok := obj.fileds[filed]; ok {
 		return ret, nil
+	}
+	if fn := obj.class.FindMethod(filed); fn != nil {
+		if !bind(fn, obj) {
+			return nil, i.runtimeError(expr.Dot, "Lox error: cannot bind method and instance")
+		}
+		return fn, nil
 	}
 	return nil, i.runtimeError(expr.Field, "no such field")
 }
@@ -348,6 +363,17 @@ func (i *Interpreter) VisitSet(expr *ExprSet) (interface{}, error) {
 	filed := expr.Field.Value().(string)
 	obj.fileds[filed] = ret
 	return ret, nil
+}
+
+func (i *Interpreter) VisitThis(expr *ExprThis) (interface{}, error) {
+	err := i.runtimeError(expr.Keyword, "Lox error: cannot resolve this")
+	// get in local env
+	if depth, ok := i.locals[expr]; ok {
+		if this, ok := i.localEnv.Get("this", depth); ok {
+			return this, nil
+		}
+	}
+	return nil, err
 }
 
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {
@@ -436,8 +462,9 @@ func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
-	i.localEnv.Define(statement.Name, NewLoxFunction(statement, i.localEnv))
-	return nil, nil
+	fn := NewLoxFunction(statement, i.localEnv)
+	i.localEnv.Define(statement.Name, fn)
+	return fn, nil
 }
 
 // Return implements the error interface, and throwed in VisitReturn.
@@ -465,5 +492,23 @@ func (i *Interpreter) VisitReturn(statement *StmtReturn) (interface{}, error) {
 func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
 	obj := NewLoxClass(statement)
 	i.localEnv.Define(statement.Name, obj)
+
+	// define a new environment to store pointer this
+	preEnv := i.localEnv
+	i.localEnv = NewEnvironment(i.localEnv)
+	i.localEnv.Define("this", nil)
+
+	// yet another environment to store class methods
+	i.localEnv = NewEnvironment(i.localEnv)
+	for _, method := range statement.Methods {
+		fn, err := i.VisitFun(method)
+		if err != nil {
+			return nil, err
+		}
+		obj.DefineMethod(method.Name, fn.(*LoxFunction))
+	}
+
+	// quit to origin env
+	i.localEnv = preEnv
 	return obj, nil
 }

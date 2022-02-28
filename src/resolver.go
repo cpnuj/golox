@@ -128,14 +128,25 @@ func (r *Resolver) VisitCall(expr *ExprCall) (interface{}, error) {
 }
 
 func (r *Resolver) VisitGet(expr *ExprGet) (interface{}, error) {
-	r.resolveExpr(expr.Object)
+	if _, err := r.resolveExpr(expr.Object); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 func (r *Resolver) VisitSet(expr *ExprSet) (interface{}, error) {
-	r.resolveExpr(expr.Object)
-	r.resolveExpr(expr.Value)
+	if _, err := r.resolveExpr(expr.Object); err != nil {
+		return nil, err
+	}
+	if _, err := r.resolveExpr(expr.Value); err != nil {
+		return nil, err
+	}
 	return nil, nil
+}
+
+func (r *Resolver) VisitThis(expr *ExprThis) (interface{}, error) {
+	err := r.resolveLocal(expr, expr.Keyword)
+	return nil, err
 }
 
 func (r *Resolver) VisitExpression(stmt *StmtExpression) (interface{}, error) {
@@ -191,11 +202,7 @@ func (r *Resolver) VisitWhile(stmt *StmtWhile) (interface{}, error) {
 	return r.resolveStmt(stmt.Body)
 }
 
-func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
-	r.declare(stmt.Name)
-	r.define(stmt.Name)
-
-	// resolve function
+func (r *Resolver) resolveFunction(stmt *StmtFun) (interface{}, error) {
 	r.beginScope()
 	for _, param := range stmt.Params {
 		r.declare(param)
@@ -210,6 +217,12 @@ func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
+	r.declare(stmt.Name)
+	r.define(stmt.Name)
+	return r.resolveFunction(stmt)
+}
+
 func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 	return r.resolveExpr(stmt.Value)
 }
@@ -217,5 +230,19 @@ func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
+
+	r.beginScope()
+	r.declare("this")
+	r.define("this")
+
+	r.beginScope()
+	for _, method := range stmt.Methods {
+		if _, err := r.VisitFun(method); err != nil {
+			return nil, err
+		}
+	}
+	r.endScope()
+
+	r.endScope()
 	return nil, nil
 }

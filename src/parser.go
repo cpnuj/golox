@@ -780,6 +780,12 @@ func (p *Parser) primary() (Expr, error) {
 		}, nil
 	}
 
+	if p.check(THIS) {
+		return &ExprThis{
+			Keyword: p.advance(),
+		}, nil
+	}
+
 	row, col := p.peek().Pos()
 	return nil, logger.NewError(row, col, "expect expression")
 }
