@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import subprocess
 
 ExitOnError = False
 
@@ -13,41 +14,33 @@ def report():
     global Total, Failed
     passed = Total-len(Failed)
     print("=== Total: %d Passed: %d Pass Rate: %.2f%%" %(Total, passed, passed/Total*100))
-    print("--- Failed:")
-    for f in Failed:
-        print("--- "+f)
-
-def analyzeOutput(output):
-    result = ""
-    it = iter(output.splitlines(True))
-    for line in it:
-        # print(line, end="")
-        if line.startswith("error: "):
-            next(it)
-            next(it)
-        else:
-            result += line
-    return result
+    if len(Failed) > 0:
+        print("--- Failed:")
+        for f in Failed:
+            print("--- "+f)
 
 def testFile(filename):
+    if not filename.endswith(".lox"):
+        return
+
     global Total, Failed
     Total += 1
 
     start = time.time()
 
-    notation = "// expect: "
-    expect = ""
+    program = sys.argv[1]
+    p = subprocess.Popen([program, filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout, _ = p.communicate()
+    result = stdout.decode("utf-8")
 
-    lines = open(filename, 'r').read().splitlines(True)
-    for line in lines:
-        expect += line.partition(notation)[2]
-
-    output = os.popen('./golox '+filename).read()
-    result = analyzeOutput(output)
+    expectFile = filename.split(".lox")[0] + ".expect"
+    f = open(expectFile, 'r')
+    expect = f.read()
+    f.close()
 
     elapsed = time.time() - start
 
-    if expect != result:
+    if result != expect:
         Failed.append(filename)
         print("=== FAIL: %s (%0.2f)s" %(filename, elapsed))
         print("--- Get:")
@@ -67,8 +60,11 @@ def testDir(dirname):
         testDir(os.path.join(root, d))
 
 def main():
-    walkDir = sys.argv[1]
-    testDir(walkDir)
+    root = sys.argv[2]
+    if os.path.isdir(root):
+        testDir(root)
+    else:
+        testFile(root)
     report()
 
 main()
