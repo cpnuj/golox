@@ -50,14 +50,16 @@ var BuildinSleep *BuildinFun = &BuildinFun{
 
 // user defined funtion
 type LoxFunction struct {
-	definition *StmtFun
-	closure    *Environment
+	definition    *StmtFun
+	closure       *Environment
+	isInitializer bool // is class initializer
 }
 
-func NewLoxFunction(definition *StmtFun, closure *Environment) *LoxFunction {
+func NewLoxFunction(definition *StmtFun, closure *Environment, isInitializer bool) *LoxFunction {
 	return &LoxFunction{
-		definition: definition,
-		closure:    closure,
+		definition:    definition,
+		closure:       closure,
+		isInitializer: isInitializer,
 	}
 }
 
@@ -75,11 +77,26 @@ func (f *LoxFunction) Call(i *Interpreter, args []interface{}) (interface{}, err
 	// catch return value
 	_, err := i.execBlock(f.definition.Body, env)
 	if err != nil {
-		if retval, ok := err.(*Return); ok {
-			return retval.Value(), nil
-		} else {
+		retval, ok := err.(*Return)
+		if !ok {
 			return nil, err
 		}
+		if f.isInitializer {
+			// TODO: make this error more readable
+			return nil, errors.New("cannot return value from initializer")
+		}
+		return retval.Value(), nil
+	}
+
+	// return this instance from initializer
+	// TODO: make this more readable
+	if f.isInitializer {
+		instance, ok := f.closure.Get("this", 1)
+		if !ok {
+			// TODO: make this error more readable
+			return nil, errors.New("Lox error: cannot get this")
+		}
+		return instance, nil
 	}
 
 	return nil, nil

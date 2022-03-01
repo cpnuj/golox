@@ -462,7 +462,7 @@ func (i *Interpreter) VisitWhile(statement *StmtWhile) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
-	fn := NewLoxFunction(statement, i.localEnv)
+	fn := NewLoxFunction(statement, i.localEnv, false)
 	i.localEnv.Define(statement.Name, fn)
 	return fn, nil
 }
@@ -482,16 +482,29 @@ func (r *Return) Error() string {
 }
 
 func (i *Interpreter) VisitReturn(statement *StmtReturn) (interface{}, error) {
-	value, err := i.eval(statement.Value)
-	if err != nil {
-		return nil, err
+	if statement.Value != nil {
+		value, err := i.eval(statement.Value)
+		if err != nil {
+			return nil, err
+		}
+		return nil, &Return{value: value}
 	}
-	return nil, &Return{value: value}
+	return nil, nil
+}
+
+func (i *Interpreter) defineMethod(class *LoxClass, statement *StmtFun) {
+	var fn *LoxFunction
+	if statement.Name == "init" {
+		fn = NewLoxFunction(statement, i.localEnv, true /* isInitializer */)
+	} else {
+		fn = NewLoxFunction(statement, i.localEnv, false)
+	}
+	class.DefineMethod(statement.Name, fn)
 }
 
 func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
-	obj := NewLoxClass(statement)
-	i.localEnv.Define(statement.Name, obj)
+	cls := NewLoxClass(statement)
+	i.localEnv.Define(statement.Name, cls)
 
 	// define a new environment to store pointer this
 	preEnv := i.localEnv
@@ -499,16 +512,13 @@ func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
 	i.localEnv.Define("this", nil)
 
 	// yet another environment to store class methods
+	// TODO: remove this new env create
 	i.localEnv = NewEnvironment(i.localEnv)
 	for _, method := range statement.Methods {
-		fn, err := i.VisitFun(method)
-		if err != nil {
-			return nil, err
-		}
-		obj.DefineMethod(method.Name, fn.(*LoxFunction))
+		i.defineMethod(cls, method)
 	}
 
 	// quit to origin env
 	i.localEnv = preEnv
-	return obj, nil
+	return cls, nil
 }

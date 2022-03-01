@@ -457,6 +457,9 @@ func (p *AstPrinter) VisitFun(stmt *StmtFun) (interface{}, error) {
 
 func (p *AstPrinter) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 	t := NewTree("return")
+	if stmt.Value == nil {
+		return t, nil
+	}
 	value, err := p.BuildExpr(stmt.Value)
 	if err != nil {
 		return nil, err

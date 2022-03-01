@@ -33,10 +33,7 @@ func (class *LoxClass) Call(i *Interpreter, args []interface{}) (interface{}, er
 		return instance, nil
 	}
 	bind(init, instance)
-	if _, err := init.Call(i, args); err != nil {
-		return nil, err
-	}
-	return instance, nil
+	return init.Call(i, args)
 }
 
 func (class *LoxClass) DefineMethod(name string, fn *LoxFunction) {

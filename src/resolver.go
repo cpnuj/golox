@@ -224,7 +224,10 @@ func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
 }
 
 func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
-	return r.resolveExpr(stmt.Value)
+	if stmt.Value != nil {
+		return r.resolveExpr(stmt.Value)
+	}
+	return nil, nil
 }
 
 func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
