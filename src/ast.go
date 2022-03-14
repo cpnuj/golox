@@ -317,8 +317,9 @@ func (node *StmtReturn) Accept(v StmtVisitor) (interface{}, error) {
 }
 
 type StmtClass struct {
-	Name    string
-	Methods []*StmtFun
+	Name       string
+	Superclass *ExprVariable
+	Methods    []*StmtFun
 }
 
 func (node *StmtClass) Type() StmtType {

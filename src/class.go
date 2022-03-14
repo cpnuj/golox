@@ -5,16 +5,18 @@ import (
 )
 
 type LoxClass struct {
-	name    string
-	methods map[string]*LoxFunction
+	superclass *LoxClass
+	name       string
+	methods    map[string]*LoxFunction
 }
 
 var _ LoxCallable = &LoxClass{}
 
-func NewLoxClass(def *StmtClass) *LoxClass {
+func NewLoxClass(def *StmtClass, super *LoxClass) *LoxClass {
 	return &LoxClass{
-		name:    def.Name,
-		methods: make(map[string]*LoxFunction),
+		superclass: super,
+		name:       def.Name,
+		methods:    make(map[string]*LoxFunction),
 	}
 }
 
@@ -43,6 +45,9 @@ func (class *LoxClass) DefineMethod(name string, fn *LoxFunction) {
 func (class *LoxClass) FindMethod(name string) *LoxFunction {
 	if fn, ok := class.methods[name]; ok {
 		return fn
+	}
+	if class.superclass != nil {
+		return class.superclass.FindMethod(name)
 	}
 	return nil
 }

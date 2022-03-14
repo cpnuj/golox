@@ -503,7 +503,18 @@ func (i *Interpreter) defineMethod(class *LoxClass, statement *StmtFun) {
 }
 
 func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
-	cls := NewLoxClass(statement)
+	var cls *LoxClass
+
+	if statement.Superclass == nil {
+		cls = NewLoxClass(statement, nil)
+	} else {
+		superclass, err := i.VisitVariable(statement.Superclass)
+		if err != nil {
+			return nil, err
+		}
+		cls = NewLoxClass(statement, superclass.(*LoxClass))
+	}
+
 	i.localEnv.Define(statement.Name, cls)
 
 	// define a new environment to store pointer this

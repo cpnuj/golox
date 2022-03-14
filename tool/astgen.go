@@ -238,6 +238,7 @@ func main() {
 		typename: "Class",
 		fields: []Field{
 			{"string", "Name"},
+			{"*ExprVariable", "Superclass"},
 			{"[]*StmtFun", "Methods"},
 		},
 	})

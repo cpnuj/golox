@@ -101,7 +101,7 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //
 // returnStmt     → "return" expression? ";" ;
 //
-// classStmt      → "class" IDENTIFIER "{" function* "}" ;
+// classStmt      → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -457,6 +457,15 @@ func (p *Parser) classStmt() (Stmt, error) {
 		return nil, err
 	}
 
+	var superclass *ExprVariable
+	if p.match(LESS) {
+		t, err := p.consume(IDENTIFIER, "Expect superclass name")
+		if err != nil {
+			return nil, err
+		}
+		superclass = &ExprVariable{t}
+	}
+
 	_, err = p.consume(LEFT_BRACE, "expect {")
 	if err != nil {
 		return nil, err
@@ -484,8 +493,9 @@ func (p *Parser) classStmt() (Stmt, error) {
 	}
 
 	return &StmtClass{
-		Name:    token.lexeme,
-		Methods: methods,
+		Name:       token.lexeme,
+		Superclass: superclass,
+		Methods:    methods,
 	}, nil
 }
 

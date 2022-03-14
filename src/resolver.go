@@ -231,6 +231,12 @@ func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 }
 
 func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
+	if stmt.Superclass != nil {
+		if _, err := r.resolveExpr(stmt.Superclass); err != nil {
+			return nil, err
+		}
+	}
+
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
