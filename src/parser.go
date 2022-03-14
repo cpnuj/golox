@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Parser struct {
 	tokens  []Token
 	current int
@@ -55,12 +57,11 @@ func (p *Parser) match(tokens ...TokenType) bool {
 	return false
 }
 
-func (p *Parser) consume(t TokenType, msg string) (Token, error) {
+func (p *Parser) consume(t TokenType, msg string) Token {
 	if p.check(t) {
-		return p.advance(), nil
+		return p.advance()
 	}
-	row, col := p.peek().Pos()
-	return Token{}, logger.NewError(row, col, msg)
+	panic(NewParseError(p.peek(), msg))
 }
 
 //
@@ -105,6 +106,13 @@ func (p *Parser) consume(t TokenType, msg string) (Token, error) {
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			fmt.Println(r)
+		}
+	}()
+
 	statements := make([]Stmt, 0)
 	for !p.match(EOF) {
 		statement, err := p.declaration()
@@ -128,12 +136,10 @@ func (p *Parser) declaration() (Stmt, error) {
 }
 
 func (p *Parser) varDeclaration() (Stmt, error) {
-	name, err := p.consume(IDENTIFIER, "need identifier")
-	if err != nil {
-		return nil, err
-	}
+	name := p.consume(IDENTIFIER, "need identifier")
 
 	var initializer Expr
+	var err error
 	if p.match(EQUAL) {
 		initializer, err = p.expression()
 		if err != nil {
@@ -141,46 +147,30 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 		}
 	}
 
-	_, err = p.consume(SEMICOLON, "expect ; after statement")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(SEMICOLON, "expect ; after statement")
 
 	return &StmtVar{Name: name, Initializer: initializer}, nil
 }
 
 func (p *Parser) funDecl() (Stmt, error) {
-	value, err := p.consume(IDENTIFIER, "expect identifier")
-	if err != nil {
-		return nil, err
-	}
-
+	value := p.consume(IDENTIFIER, "expect identifier")
 	name := value.Value().(string)
 
-	_, err = p.consume(LEFT_PAREN, "expect (")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(LEFT_PAREN, "expect (")
 
 	var params []string
 	if p.check(RIGHT_PAREN) {
 		params = make([]string, 0)
 	} else {
+		var err error
 		params, err = p.parameters()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "expect )")
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = p.consume(LEFT_BRACE, "expect {")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_PAREN, "expect )")
+	p.consume(LEFT_BRACE, "expect {")
 
 	body, err := p.blockStmt()
 	if err != nil {
@@ -197,11 +187,7 @@ func (p *Parser) funDecl() (Stmt, error) {
 func (p *Parser) parameters() ([]string, error) {
 	params := make([]string, 0)
 	for {
-		param, err := p.consume(IDENTIFIER, "expect identifier")
-		if err != nil {
-			return nil, err
-		}
-
+		param := p.consume(IDENTIFIER, "expect identifier")
 		params = append(params, param.Value().(string))
 		if !p.match(COMMA) {
 			break
@@ -240,12 +226,7 @@ func (p *Parser) printStmt() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = p.consume(SEMICOLON, "expect ; after statement")
-	if err != nil {
-		return nil, err
-	}
-
+	p.consume(SEMICOLON, "expect ; after statement")
 	return &StmtPrint{Expression: value}, nil
 }
 
@@ -254,12 +235,7 @@ func (p *Parser) exprStmt() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = p.consume(SEMICOLON, "expect ; after statement")
-	if err != nil {
-		return nil, err
-	}
-
+	p.consume(SEMICOLON, "expect ; after statement")
 	return &StmtExpression{Expression: value}, nil
 }
 
@@ -272,32 +248,21 @@ func (p *Parser) blockStmt() (Stmt, error) {
 		}
 		statements = append(statements, statement)
 	}
-
-	_, err := p.consume(RIGHT_BRACE, "expect }")
-	if err != nil {
-		return nil, err
-	}
-
+	p.consume(RIGHT_BRACE, "expect }")
 	return &StmtBlock{
 		Statements: statements,
 	}, nil
 }
 
 func (p *Parser) ifStmt() (Stmt, error) {
-	_, err := p.consume(LEFT_PAREN, "expect ( after if")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(LEFT_PAREN, "expect ( after if")
 
 	cond, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "expect )")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_PAREN, "expect )")
 
 	thenBranch, err := p.statement()
 	if err != nil {
@@ -320,20 +285,14 @@ func (p *Parser) ifStmt() (Stmt, error) {
 }
 
 func (p *Parser) whileStmt() (Stmt, error) {
-	_, err := p.consume(LEFT_PAREN, "expect ( after while")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(LEFT_PAREN, "expect ( after while")
 
 	cond, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "expect )")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_PAREN, "expect )")
 
 	body, err := p.statement()
 	if err != nil {
@@ -347,12 +306,10 @@ func (p *Parser) whileStmt() (Stmt, error) {
 }
 
 func (p *Parser) forStmt() (Stmt, error) {
-	_, err := p.consume(LEFT_PAREN, "expect ( after for")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(LEFT_PAREN, "expect ( after for")
 
 	var initializer Stmt
+	var err error
 	if p.match(SEMICOLON) {
 		initializer = nil
 	} else if p.match(VAR) {
@@ -375,10 +332,7 @@ func (p *Parser) forStmt() (Stmt, error) {
 		}
 	}
 
-	_, err = p.consume(SEMICOLON, "expect ;")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(SEMICOLON, "expect ;")
 
 	var increment Expr
 	if !p.check(RIGHT_PAREN) {
@@ -388,10 +342,7 @@ func (p *Parser) forStmt() (Stmt, error) {
 		}
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "expect )")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_PAREN, "expect )")
 
 	body, err := p.statement()
 	if err != nil {
@@ -440,10 +391,7 @@ func (p *Parser) returnStmt() (Stmt, error) {
 		}
 	}
 
-	_, err = p.consume(SEMICOLON, "expect ;")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(SEMICOLON, "expect ;")
 
 	return &StmtReturn{
 		Keyword: keyword,
@@ -452,24 +400,15 @@ func (p *Parser) returnStmt() (Stmt, error) {
 }
 
 func (p *Parser) classStmt() (Stmt, error) {
-	token, err := p.consume(IDENTIFIER, "expect indentifier")
-	if err != nil {
-		return nil, err
-	}
+	token := p.consume(IDENTIFIER, "expect indentifier")
 
 	var superclass *ExprVariable
 	if p.match(LESS) {
-		t, err := p.consume(IDENTIFIER, "Expect superclass name")
-		if err != nil {
-			return nil, err
-		}
+		t := p.consume(IDENTIFIER, "Expect superclass name")
 		superclass = &ExprVariable{t}
 	}
 
-	_, err = p.consume(LEFT_BRACE, "expect {")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(LEFT_BRACE, "expect {")
 
 	methods := make([]*StmtFun, 0)
 	for !p.check(RIGHT_BRACE) && !p.atEnd() {
@@ -487,10 +426,7 @@ func (p *Parser) classStmt() (Stmt, error) {
 		methods = append(methods, funNode)
 	}
 
-	_, err = p.consume(RIGHT_BRACE, "expect }")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_BRACE, "expect }")
 
 	return &StmtClass{
 		Name:       token.lexeme,
@@ -747,10 +683,7 @@ func (p *Parser) call() (Expr, error) {
 			}
 		} else if p.check(DOT) {
 			dot := p.advance()
-			field, err := p.consume(IDENTIFIER, "expect identifier after dot")
-			if err != nil {
-				return nil, err
-			}
+			field := p.consume(IDENTIFIER, "expect identifier after dot")
 			callee = &ExprGet{
 				Object: callee,
 				Field:  field,
@@ -777,10 +710,7 @@ func (p *Parser) primary() (Expr, error) {
 			return nil, err
 		}
 
-		_, err = p.consume(RIGHT_PAREN, "Expect ')' after expression")
-		if err != nil {
-			return nil, err
-		}
+		p.consume(RIGHT_PAREN, "Expect ')' after expression")
 
 		return &ExprGrouping{Expression: expr}, nil
 	}
@@ -799,17 +729,12 @@ func (p *Parser) primary() (Expr, error) {
 
 	if p.check(SUPER) {
 		super := p.advance()
-		if _, err := p.consume(DOT, "Expect '.' after 'super'."); err != nil {
-			return nil, err
-		}
-		if name, err := p.consume(IDENTIFIER, "Expect superclass method name"); err != nil {
-			return nil, err
-		} else {
-			return &ExprSuper{
-				Keyword: super,
-				Method:  name,
-			}, nil
-		}
+		p.consume(DOT, "Expect '.' after 'super'.")
+		name := p.consume(IDENTIFIER, "Expect superclass method name")
+		return &ExprSuper{
+			Keyword: super,
+			Method:  name,
+		}, nil
 	}
 
 	row, col := p.peek().Pos()
@@ -837,10 +762,7 @@ func (p *Parser) arguments() ([]Expr, error) {
 		args = append(args, arg)
 	}
 
-	_, err = p.consume(RIGHT_PAREN, "expect )")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(RIGHT_PAREN, "expect )")
 
 	return args, nil
 }
