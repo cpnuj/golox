@@ -68,6 +68,13 @@ func NewInterpreter() *Interpreter {
 }
 
 func (i *Interpreter) Interprete(statements []Stmt) error {
+	defer func() {
+		r := recover()
+		if r != nil {
+			fmt.Println(r)
+		}
+	}()
+
 	for _, statement := range statements {
 		err := i.execute(statement)
 		if err != nil {
@@ -393,7 +400,8 @@ func (i *Interpreter) VisitSuper(expr *ExprSuper) (interface{}, error) {
 		return nil, i.runtimeError(expr.Keyword, "Lox error: cannot resolve this")
 	}
 	if fn = super.(*LoxClass).FindMethod(expr.Method.Value().(string)); fn == nil {
-		return nil, i.runtimeError(expr.Method, "cannot find method "+expr.Method.Value().(string))
+		msg := fmt.Sprintf("Undefined property '%s'.", expr.Method.Value().(string))
+		panic(NewRuntimeError(expr.Method.row, msg))
 	}
 	bind(fn, this.(*LoxInstance))
 	return fn, nil
