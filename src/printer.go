@@ -337,6 +337,12 @@ func (p *AstPrinter) VisitThis(expr *ExprThis) (interface{}, error) {
 	return NewTree("this"), nil
 }
 
+func (p *AstPrinter) VisitSuper(expr *ExprSuper) (interface{}, error) {
+	t := NewTree("super")
+	t.Add(expr.Method.lexeme)
+	return t, nil
+}
+
 func (p *AstPrinter) VisitExpression(stmt *StmtExpression) (interface{}, error) {
 	t, err := p.BuildExpr(stmt.Expression)
 	if err != nil {

@@ -517,6 +517,7 @@ func (p *Parser) classStmt() (Stmt, error) {
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
 //                | "(" expression ")"
 //                | IDENTIFIER ;
+//                | "super" "." IDENTIFIER ;
 //
 // arguments      → expression ("," expression)*
 //
@@ -794,6 +795,21 @@ func (p *Parser) primary() (Expr, error) {
 		return &ExprThis{
 			Keyword: p.advance(),
 		}, nil
+	}
+
+	if p.check(SUPER) {
+		super := p.advance()
+		if _, err := p.consume(DOT, "Expect '.' after 'super'."); err != nil {
+			return nil, err
+		}
+		if name, err := p.consume(IDENTIFIER, "Expect superclass method name"); err != nil {
+			return nil, err
+		} else {
+			return &ExprSuper{
+				Keyword: super,
+				Method:  name,
+			}, nil
+		}
 	}
 
 	row, col := p.peek().Pos()

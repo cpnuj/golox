@@ -149,6 +149,11 @@ func (r *Resolver) VisitThis(expr *ExprThis) (interface{}, error) {
 	return nil, err
 }
 
+func (r *Resolver) VisitSuper(expr *ExprSuper) (interface{}, error) {
+	err := r.resolveLocal(expr, expr.Keyword)
+	return nil, err
+}
+
 func (r *Resolver) VisitExpression(stmt *StmtExpression) (interface{}, error) {
 	return r.resolveExpr(stmt.Expression)
 }
@@ -243,6 +248,11 @@ func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
 	r.beginScope()
 	r.declare("this")
 	r.define("this")
+
+	if stmt.Superclass != nil {
+		r.declare("super")
+		r.define("super")
+	}
 
 	r.beginScope()
 	for _, method := range stmt.Methods {

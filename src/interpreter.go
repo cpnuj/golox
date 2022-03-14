@@ -376,6 +376,29 @@ func (i *Interpreter) VisitThis(expr *ExprThis) (interface{}, error) {
 	return nil, err
 }
 
+func (i *Interpreter) VisitSuper(expr *ExprSuper) (interface{}, error) {
+	// get in local env
+	var super, this interface{}
+	var fn *LoxFunction
+	var ok bool
+	var depth int
+
+	if depth, ok = i.locals[expr]; !ok {
+		return nil, i.runtimeError(expr.Keyword, "Lox error: cannot resolve super")
+	}
+	if super, ok = i.localEnv.Get("super", depth); !ok {
+		return nil, i.runtimeError(expr.Keyword, "Lox error: cannot resolve super")
+	}
+	if this, ok = i.localEnv.Get("this", depth); !ok {
+		return nil, i.runtimeError(expr.Keyword, "Lox error: cannot resolve this")
+	}
+	if fn = super.(*LoxClass).FindMethod(expr.Method.Value().(string)); fn == nil {
+		return nil, i.runtimeError(expr.Method, "cannot find method "+expr.Method.Value().(string))
+	}
+	bind(fn, this.(*LoxInstance))
+	return fn, nil
+}
+
 func (i *Interpreter) VisitExpression(statement *StmtExpression) (interface{}, error) {
 	return i.eval(statement.Expression)
 }
@@ -517,10 +540,13 @@ func (i *Interpreter) VisitClass(statement *StmtClass) (interface{}, error) {
 
 	i.localEnv.Define(statement.Name, cls)
 
-	// define a new environment to store pointer this
+	// define a new environment to store pointer this and super
 	preEnv := i.localEnv
 	i.localEnv = NewEnvironment(i.localEnv)
 	i.localEnv.Define("this", nil)
+	if statement.Superclass != nil {
+		i.localEnv.Define("super", cls.superclass)
+	}
 
 	// yet another environment to store class methods
 	// TODO: remove this new env create
