@@ -401,7 +401,7 @@ func (i *Interpreter) VisitSuper(expr *ExprSuper) (interface{}, error) {
 	}
 	if fn = super.(*LoxClass).FindMethod(expr.Method.Value().(string)); fn == nil {
 		msg := fmt.Sprintf("Undefined property '%s'.", expr.Method.Value().(string))
-		panic(NewRuntimeError(expr.Method.row, msg))
+		panic(NewLoxError(RuntimeError, expr.Method, msg))
 	}
 	bind(fn, this.(*LoxInstance))
 	return fn, nil

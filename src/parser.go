@@ -61,7 +61,7 @@ func (p *Parser) consume(t TokenType, msg string) Token {
 	if p.check(t) {
 		return p.advance()
 	}
-	panic(NewParseError(p.peek(), msg))
+	panic(NewLoxError(ParseError, p.peek(), msg))
 }
 
 //
