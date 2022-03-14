@@ -53,7 +53,7 @@ func (r *Resolver) define(name string) {
 	r.scopes[len(r.scopes)-1][name] = true
 }
 
-func (r *Resolver) resolveLocal(expr Expr, nameTK Token) error {
+func (r *Resolver) resolveLocal(expr Expr, nameTK Token, mustResolve bool) bool {
 	name := nameTK.Value().(string)
 	distance := -1
 	for i := len(r.scopes) - 1; i >= 0; i-- {
@@ -63,13 +63,16 @@ func (r *Resolver) resolveLocal(expr Expr, nameTK Token) error {
 			continue
 		}
 		if !init {
-			return logger.NewError(nameTK.row, nameTK.col, "resolver: uninitialized variable")
+			panic(NewLoxError(ResolveError, nameTK, "resolver: uninitialized variable"))
 		}
 		r.locals[expr] = distance
-		return nil
+		return true
+	}
+	if mustResolve {
+		return false
 	}
 	// variable not defined by script, find in global
-	return nil
+	return true
 }
 
 func (r *Resolver) VisitLiteral(*ExprLiteral) (interface{}, error) {
@@ -151,7 +154,10 @@ func (r *Resolver) VisitThis(expr *ExprThis) (interface{}, error) {
 
 func (r *Resolver) VisitSuper(expr *ExprSuper) (interface{}, error) {
 	err := r.resolveLocal(expr, expr.Keyword)
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' in a class with no superclass."))
 }
 
 func (r *Resolver) VisitExpression(stmt *StmtExpression) (interface{}, error) {
