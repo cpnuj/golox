@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/pprof"
 )
 
 var interpreter *Interpreter
@@ -16,6 +17,11 @@ func init() {
 }
 
 func run(src string) error {
+	f, _ := os.OpenFile("profile", os.O_CREATE|os.O_RDWR, 0644)
+	defer f.Close()
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
 	logger.Reset(src, os.Stdout, os.Stderr)
 
 	scanner := NewScanner(src)
