@@ -1,9 +1,12 @@
 package main
 
+import "fmt"
+
 type Resolver struct {
 	locals map[Expr]int
 	scopes []map[string]bool
 
+	errs    error
 	inclass int
 }
 
@@ -19,21 +22,29 @@ func NewResolver() *Resolver {
 	}
 }
 
-func (r *Resolver) Resolve(statements []Stmt) (_ map[Expr]int, err error) {
+func (r *Resolver) addError(err error) {
+	if r.errs == nil {
+		r.errs = err
+	} else {
+		r.errs = fmt.Errorf("%s\n%s", r.errs, err)
+	}
+}
+
+func (r *Resolver) Resolve(statements []Stmt) (map[Expr]int, error) {
 	defer func() {
-		r := recover()
-		if r != nil {
-			err = r.(*LoxError)
+		e := recover()
+		if e != nil {
+			r.addError(e.(*LoxError))
 		}
 	}()
 
 	for _, statement := range statements {
 		if _, err := r.resolveStmt(statement); err != nil {
-			return nil, err
+			r.addError(err)
 		}
 	}
 
-	return r.locals, err
+	return r.locals, r.errs
 }
 
 func (r *Resolver) resolveExpr(expr Expr) (interface{}, error) {
@@ -161,10 +172,15 @@ func (r *Resolver) VisitThis(expr *ExprThis) (interface{}, error) {
 
 func (r *Resolver) VisitSuper(expr *ExprSuper) (interface{}, error) {
 	if r.inclass <= 0 {
-		panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' outside of a class."))
+		r.addError(
+			NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' outside of a class."),
+		)
+		return nil, nil
 	}
 	if !r.resolveLocal(expr, expr.Keyword, true) {
-		panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' in a class with no superclass."))
+		r.addError(
+			NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' in a class with no superclass."),
+		)
 	}
 	return nil, nil
 }

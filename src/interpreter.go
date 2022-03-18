@@ -312,10 +312,10 @@ func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
 		args = append(args, value)
 	}
 
-	if len(args) > function.Arity() {
-		return nil, i.runtimeError(expr.Paren, "too many arguments")
-	} else if len(args) < function.Arity() {
-		return nil, i.runtimeError(expr.Paren, "too few arguments")
+	expect, got := function.Arity(), len(args)
+	if expect != got {
+		panic(NewLoxError(RuntimeError, expr.Paren,
+			fmt.Sprintf("Expected %d arguments but got %d.", expect, got)))
 	}
 
 	return function.Call(i, args)
