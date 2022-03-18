@@ -491,8 +491,7 @@ func (p *Parser) assignment() (Expr, error) {
 				Dot:    left.Dot,
 			}
 		default:
-			row, col := tk.Pos()
-			return nil, logger.NewError(row, col, "invalid assign target")
+			panic(NewLoxError(ParseError, tk, "Invalid assignment target."))
 		}
 	}
 

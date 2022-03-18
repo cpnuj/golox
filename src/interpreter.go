@@ -88,6 +88,22 @@ func (i *Interpreter) SetLocals(locals map[Expr]int) {
 	i.locals = locals
 }
 
+func (i *Interpreter) getVariable(expr Expr, name string) (val interface{}, ok bool) {
+	depth, resolved := i.locals[expr]
+	if resolved {
+		return i.localEnv.Get(name, depth)
+	}
+	return i.globalEnv.Get(name, 0)
+}
+
+func (i *Interpreter) setVariable(expr Expr, name string, val interface{}) bool {
+	depth, resolved := i.locals[expr]
+	if resolved {
+		return i.localEnv.Set(name, depth, val)
+	}
+	return i.globalEnv.Set(name, 0, val)
+}
+
 func (i *Interpreter) execute(statement Stmt) error {
 	_, err := statement.Accept(i)
 	return err
@@ -136,22 +152,13 @@ func (i *Interpreter) VisitLiteral(expr *ExprLiteral) (interface{}, error) {
 
 func (i *Interpreter) VisitVariable(expr *ExprVariable) (interface{}, error) {
 	name := expr.Name.Value().(string)
-
-	// defined in local
-	if depth, ok := i.locals[expr]; ok {
-		value, ok := i.localEnv.Get(name, depth)
-		if !ok {
-			return nil, i.runtimeError(expr.Name, "undefined variable "+name)
-		}
-		return value, nil
+	value, find := i.getVariable(expr, name)
+	if !find {
+		panic(NewLoxError(RuntimeError, expr.Name,
+			fmt.Sprintf("Undefined variable '%s'.", name),
+		))
 	}
-
-	// search in global
-	if value, ok := i.globalEnv.Get(name, 0); ok {
-		return value, nil
-	}
-
-	return nil, i.runtimeError(expr.Name, "undefined variable "+name)
+	return value, nil
 }
 
 func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
@@ -161,20 +168,13 @@ func (i *Interpreter) VisitAssign(expr *ExprAssign) (interface{}, error) {
 		return nil, err
 	}
 
-	// defined in local
-	if depth, ok := i.locals[expr]; ok {
-		if ok := i.localEnv.Set(name, depth, value); !ok {
-			return nil, i.runtimeError(expr.Name, "Lox Error: undefined variable "+name)
-		}
-		return value, nil
+	if succ := i.setVariable(expr, name, value); !succ {
+		panic(NewLoxError(RuntimeError, expr.Name,
+			fmt.Sprintf("Undefined variable '%s'.", name),
+		))
 	}
 
-	// search in global
-	if ok := i.globalEnv.Set(name, 0, value); ok {
-		return value, nil
-	}
-
-	return nil, i.runtimeError(expr.Name, "Lox Error: undefined variable "+name)
+	return value, nil
 }
 
 func (i *Interpreter) VisitUnary(expr *ExprUnary) (interface{}, error) {
