@@ -18,6 +18,14 @@ type LoxError struct {
 	tk  Token // used by parse error
 }
 
+func NewLoxError(t LoxErrorType, tk Token, msg string) *LoxError {
+	return &LoxError{
+		t:   t,
+		msg: msg,
+		tk:  tk,
+	}
+}
+
 func (e *LoxError) String() string {
 	var ret string
 	switch e.t {
@@ -31,10 +39,6 @@ func (e *LoxError) String() string {
 	return ret
 }
 
-func NewLoxError(t LoxErrorType, tk Token, msg string) *LoxError {
-	return &LoxError{
-		t:   t,
-		msg: msg,
-		tk:  tk,
-	}
+func (e *LoxError) Error() string {
+	return e.String()
 }

@@ -3,6 +3,8 @@ package main
 type Resolver struct {
 	locals map[Expr]int
 	scopes []map[string]bool
+
+	inclass int
 }
 
 var (
@@ -17,13 +19,21 @@ func NewResolver() *Resolver {
 	}
 }
 
-func (r *Resolver) Resolve(statements []Stmt) (map[Expr]int, error) {
+func (r *Resolver) Resolve(statements []Stmt) (_ map[Expr]int, err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			err = r.(*LoxError)
+		}
+	}()
+
 	for _, statement := range statements {
 		if _, err := r.resolveStmt(statement); err != nil {
 			return nil, err
 		}
 	}
-	return r.locals, nil
+
+	return r.locals, err
 }
 
 func (r *Resolver) resolveExpr(expr Expr) (interface{}, error) {
@@ -68,11 +78,7 @@ func (r *Resolver) resolveLocal(expr Expr, nameTK Token, mustResolve bool) bool 
 		r.locals[expr] = distance
 		return true
 	}
-	if mustResolve {
-		return false
-	}
-	// variable not defined by script, find in global
-	return true
+	return !mustResolve
 }
 
 func (r *Resolver) VisitLiteral(*ExprLiteral) (interface{}, error) {
@@ -80,13 +86,12 @@ func (r *Resolver) VisitLiteral(*ExprLiteral) (interface{}, error) {
 }
 
 func (r *Resolver) VisitVariable(expr *ExprVariable) (interface{}, error) {
-	return nil, r.resolveLocal(expr, expr.Name)
+	r.resolveLocal(expr, expr.Name, false /* mustResolve */)
+	return nil, nil
 }
 
 func (r *Resolver) VisitAssign(expr *ExprAssign) (interface{}, error) {
-	if err := r.resolveLocal(expr, expr.Name); err != nil {
-		return nil, err
-	}
+	r.resolveLocal(expr, expr.Name, false)
 	return r.resolveExpr(expr.Value)
 }
 
@@ -148,16 +153,20 @@ func (r *Resolver) VisitSet(expr *ExprSet) (interface{}, error) {
 }
 
 func (r *Resolver) VisitThis(expr *ExprThis) (interface{}, error) {
-	err := r.resolveLocal(expr, expr.Keyword)
-	return nil, err
+	if !r.resolveLocal(expr, expr.Keyword, true) {
+		panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'this' out of class"))
+	}
+	return nil, nil
 }
 
 func (r *Resolver) VisitSuper(expr *ExprSuper) (interface{}, error) {
-	err := r.resolveLocal(expr, expr.Keyword)
-	if err != nil {
-		return nil, err
+	if r.inclass <= 0 {
+		panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' outside of a class."))
 	}
-	panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' in a class with no superclass."))
+	if !r.resolveLocal(expr, expr.Keyword, true) {
+		panic(NewLoxError(ResolveError, expr.Keyword, "Can't use 'super' in a class with no superclass."))
+	}
+	return nil, nil
 }
 
 func (r *Resolver) VisitExpression(stmt *StmtExpression) (interface{}, error) {
@@ -241,7 +250,17 @@ func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) enterClass() {
+	r.inclass++
+}
+
+func (r *Resolver) endClass() {
+	r.inclass--
+}
+
 func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
+	r.enterClass()
+
 	if stmt.Superclass != nil {
 		if _, err := r.resolveExpr(stmt.Superclass); err != nil {
 			return nil, err
@@ -269,5 +288,7 @@ func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
 	r.endScope()
 
 	r.endScope()
+
+	r.endClass()
 	return nil, nil
 }

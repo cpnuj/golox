@@ -730,7 +730,7 @@ func (p *Parser) primary() (Expr, error) {
 	if p.check(SUPER) {
 		super := p.advance()
 		p.consume(DOT, "Expect '.' after 'super'.")
-		name := p.consume(IDENTIFIER, "Expect superclass method name")
+		name := p.consume(IDENTIFIER, "Expect superclass method name.")
 		return &ExprSuper{
 			Keyword: super,
 			Method:  name,
