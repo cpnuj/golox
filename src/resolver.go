@@ -278,6 +278,11 @@ func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
 	r.enterClass()
 
 	if stmt.Superclass != nil {
+		if stmt.Superclass.Name.lexeme == stmt.Name {
+			r.addError(NewLoxError(
+				ResolveError, stmt.Superclass.Name, "A class can't inherit from itself.",
+			))
+		}
 		if _, err := r.resolveExpr(stmt.Superclass); err != nil {
 			return nil, err
 		}
