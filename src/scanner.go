@@ -302,6 +302,13 @@ func (s *Scanner) peek() byte {
 	return s.src[s.current]
 }
 
+func (s *Scanner) lookahead() byte {
+	if s.current+1 >= len(s.src) {
+		return 0
+	}
+	return s.src[s.current+1]
+}
+
 func (s *Scanner) lexeme() string {
 	return string(s.src[s.start:s.current])
 }
@@ -311,14 +318,8 @@ func (s *Scanner) number() {
 		s.advance()
 	}
 
-	if s.peek() == '.' {
+	if s.peek() == '.' && isDigit(s.lookahead()) {
 		s.advance()
-
-		if !isDigit(s.peek()) {
-			s.errors = append(s.errors, logger.NewError(s.row, s.col, "expect digit"))
-			return
-		}
-
 		for isDigit(s.peek()) {
 			s.advance()
 		}

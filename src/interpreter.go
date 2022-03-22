@@ -336,7 +336,7 @@ func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
 
 	obj, ok := value.(*LoxInstance)
 	if !ok {
-		return nil, i.runtimeError(expr.Dot, "only instances have fields")
+		panic(NewLoxError(RuntimeError, expr.Dot, "Only instances have properties."))
 	}
 
 	filed := expr.Field.Value().(string)
@@ -349,7 +349,8 @@ func (i *Interpreter) VisitGet(expr *ExprGet) (interface{}, error) {
 		}
 		return fn, nil
 	}
-	return nil, i.runtimeError(expr.Field, "no such field")
+	panic(NewLoxError(RuntimeError, expr.Dot,
+		fmt.Sprintf("Undefined property '%s'.", expr.Field.lexeme)))
 }
 
 func (i *Interpreter) VisitSet(expr *ExprSet) (interface{}, error) {
@@ -360,7 +361,7 @@ func (i *Interpreter) VisitSet(expr *ExprSet) (interface{}, error) {
 
 	obj, ok := value.(*LoxInstance)
 	if !ok {
-		return nil, i.runtimeError(expr.Dot, "only instances have fields")
+		panic(NewLoxError(RuntimeError, expr.Dot, "Only instances have fields."))
 	}
 
 	ret, err := i.eval(expr.Value)
