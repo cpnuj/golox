@@ -71,6 +71,7 @@ func (p *Parser) consume(t TokenType, msg string) Token {
 //
 // declaration    → varDecl
 //                → funDecl
+//                | classDecl
 //                | statement ;
 //
 // varDecl        → VAR IDENTIFIER "=" expression ;
@@ -79,14 +80,15 @@ func (p *Parser) consume(t TokenType, msg string) Token {
 // function       → IDENTIFIER "(" parameters? ")" blockStmt ;
 // parameters     → IDENTIFIER ("," IDENTIFIER)* ;
 //
+// classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
+//
 // statement      → exprStmt
 //                | printStmt
 //                | blockStmt
 //                | ifStmt
 //                | whileStmt
 //                | forStmt
-//                | returnStmt
-//                | classStmt;
+//                | returnStmt ;
 //
 // exprStmt       → expression ";" ;
 //
@@ -101,8 +103,6 @@ func (p *Parser) consume(t TokenType, msg string) Token {
 // forStmt        → "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement ;
 //
 // returnStmt     → "return" expression? ";" ;
-//
-// classStmt      → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
 //
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -131,6 +131,9 @@ func (p *Parser) declaration() (Stmt, error) {
 	}
 	if p.match(FUN) {
 		return p.funDecl()
+	}
+	if p.match(CLASS) {
+		return p.classDecl()
 	}
 	return p.statement()
 }
@@ -196,6 +199,42 @@ func (p *Parser) parameters() ([]string, error) {
 	return params, nil
 }
 
+func (p *Parser) classDecl() (Stmt, error) {
+	token := p.consume(IDENTIFIER, "expect indentifier")
+
+	var superclass *ExprVariable
+	if p.match(LESS) {
+		t := p.consume(IDENTIFIER, "Expect superclass name")
+		superclass = &ExprVariable{t}
+	}
+
+	p.consume(LEFT_BRACE, "expect {")
+
+	methods := make([]*StmtFun, 0)
+	for !p.check(RIGHT_BRACE) && !p.atEnd() {
+		fun, err := p.funDecl()
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: error to logger
+		funNode, ok := fun.(*StmtFun)
+		if !ok {
+			panic("Programming error: Expect type StmtFun")
+		}
+
+		methods = append(methods, funNode)
+	}
+
+	p.consume(RIGHT_BRACE, "expect }")
+
+	return &StmtClass{
+		Name:       token.lexeme,
+		Superclass: superclass,
+		Methods:    methods,
+	}, nil
+}
+
 func (p *Parser) statement() (Stmt, error) {
 	if p.match(PRINT) {
 		return p.printStmt()
@@ -214,9 +253,6 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 	if p.match(RETURN) {
 		return p.returnStmt()
-	}
-	if p.match(CLASS) {
-		return p.classStmt()
 	}
 	return p.exprStmt()
 }
@@ -396,42 +432,6 @@ func (p *Parser) returnStmt() (Stmt, error) {
 	return &StmtReturn{
 		Keyword: keyword,
 		Value:   expr,
-	}, nil
-}
-
-func (p *Parser) classStmt() (Stmt, error) {
-	token := p.consume(IDENTIFIER, "expect indentifier")
-
-	var superclass *ExprVariable
-	if p.match(LESS) {
-		t := p.consume(IDENTIFIER, "Expect superclass name")
-		superclass = &ExprVariable{t}
-	}
-
-	p.consume(LEFT_BRACE, "expect {")
-
-	methods := make([]*StmtFun, 0)
-	for !p.check(RIGHT_BRACE) && !p.atEnd() {
-		fun, err := p.funDecl()
-		if err != nil {
-			return nil, err
-		}
-
-		// TODO: error to logger
-		funNode, ok := fun.(*StmtFun)
-		if !ok {
-			panic("Programming error: Expect type StmtFun")
-		}
-
-		methods = append(methods, funNode)
-	}
-
-	p.consume(RIGHT_BRACE, "expect }")
-
-	return &StmtClass{
-		Name:       token.lexeme,
-		Superclass: superclass,
-		Methods:    methods,
 	}, nil
 }
 
@@ -736,8 +736,7 @@ func (p *Parser) primary() (Expr, error) {
 		}, nil
 	}
 
-	row, col := p.peek().Pos()
-	return nil, logger.NewError(row, col, "expect expression")
+	panic(NewLoxError(ParseError, p.peek(), "Expect expression."))
 }
 
 func (p *Parser) arguments() ([]Expr, error) {
