@@ -67,37 +67,36 @@ func (f *LoxFunction) Arity() int {
 	return len(f.definition.Params)
 }
 
-func (f *LoxFunction) Call(i *Interpreter, args []interface{}) (interface{}, error) {
+func (f *LoxFunction) Call(i *Interpreter, args []interface{}) (ret interface{}, err error) {
 	env := NewEnvironment(f.closure)
 	params := f.definition.Params
 	for i := range args {
 		env.Define(params[i], args[i])
 	}
 
-	// catch return value
-	_, err := i.execBlock(f.definition.Body, env)
-	if err != nil {
-		retval, ok := err.(*Return)
-		if !ok {
-			return nil, err
-		}
+	// return this if f is init function
+	defer func() {
 		if f.isInitializer {
-			// TODO: make this error more readable
-			return nil, errors.New("cannot return value from initializer")
+			ret, _ = f.closure.Get("this", 1)
 		}
-		return retval.Value(), nil
-	}
+	}()
 
-	// return this instance from initializer
-	// TODO: make this more readable
-	if f.isInitializer {
-		instance, ok := f.closure.Get("this", 1)
-		if !ok {
-			// TODO: make this error more readable
-			return nil, errors.New("Lox error: cannot get this")
+	// catch return value
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
 		}
-		return instance, nil
-	}
 
-	return nil, nil
+		retval, isReturn := r.(*Return)
+		if !isReturn {
+			panic(r)
+		}
+
+		ret = retval.Value
+	}()
+
+	i.execBlock(f.definition.Body, env)
+
+	return
 }

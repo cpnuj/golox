@@ -147,7 +147,7 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 		}
 	}
 
-	p.consume(SEMICOLON, "expect ; after statement")
+	p.consume(SEMICOLON, "Expect ';' after statement.")
 
 	return &StmtVar{Name: name, Initializer: initializer}, nil
 }
@@ -226,7 +226,7 @@ func (p *Parser) printStmt() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.consume(SEMICOLON, "expect ; after statement")
+	p.consume(SEMICOLON, "Expect ';' after statement.")
 	return &StmtPrint{Expression: value}, nil
 }
 
@@ -235,7 +235,7 @@ func (p *Parser) exprStmt() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.consume(SEMICOLON, "expect ; after statement")
+	p.consume(SEMICOLON, "Expect ';' after expression.")
 	return &StmtExpression{Expression: value}, nil
 }
 

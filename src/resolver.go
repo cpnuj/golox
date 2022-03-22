@@ -6,9 +6,20 @@ type Resolver struct {
 	locals map[Expr]int
 	scopes []map[string]bool
 
-	errs    error
-	inclass int
+	errs error
+
+	// states
+	inclass        int
+	currentFuntion functionType
 }
+
+type functionType int
+
+const (
+	NoFuntion functionType = iota
+	NormalFunc
+	Initializer
+)
 
 var (
 	_ ExprVisitor = &Resolver{}
@@ -37,6 +48,9 @@ func (r *Resolver) Resolve(statements []Stmt) (map[Expr]int, error) {
 			r.addError(e.(*LoxError))
 		}
 	}()
+
+	// setup states
+	r.currentFuntion = NoFuntion
 
 	for _, statement := range statements {
 		if _, err := r.resolveStmt(statement); err != nil {
@@ -238,7 +252,16 @@ func (r *Resolver) VisitWhile(stmt *StmtWhile) (interface{}, error) {
 	return r.resolveStmt(stmt.Body)
 }
 
-func (r *Resolver) resolveFunction(stmt *StmtFun) (interface{}, error) {
+func (r *Resolver) resolveFunction(stmt *StmtFun, functionT functionType) (interface{}, error) {
+	preFuntionT := r.currentFuntion
+	r.currentFuntion = functionT
+	defer func() {
+		r.currentFuntion = preFuntionT
+	}()
+
+	r.declare(stmt.Name)
+	r.define(stmt.Name)
+
 	r.beginScope()
 	for _, param := range stmt.Params {
 		r.declare(param)
@@ -254,13 +277,14 @@ func (r *Resolver) resolveFunction(stmt *StmtFun) (interface{}, error) {
 }
 
 func (r *Resolver) VisitFun(stmt *StmtFun) (interface{}, error) {
-	r.declare(stmt.Name)
-	r.define(stmt.Name)
-	return r.resolveFunction(stmt)
+	return r.resolveFunction(stmt, NormalFunc)
 }
 
 func (r *Resolver) VisitReturn(stmt *StmtReturn) (interface{}, error) {
 	if stmt.Value != nil {
+		if r.currentFuntion == Initializer {
+			r.addError(NewLoxError(ResolveError, stmt.Keyword, "Can't return a value from an initializer."))
+		}
 		return r.resolveExpr(stmt.Value)
 	}
 	return nil, nil
@@ -302,8 +326,10 @@ func (r *Resolver) VisitClass(stmt *StmtClass) (interface{}, error) {
 
 	r.beginScope()
 	for _, method := range stmt.Methods {
-		if _, err := r.VisitFun(method); err != nil {
-			return nil, err
+		if method.Name == "init" {
+			r.resolveFunction(method, Initializer)
+		} else {
+			r.resolveFunction(method, NormalFunc)
 		}
 	}
 	r.endScope()

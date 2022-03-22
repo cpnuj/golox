@@ -30,7 +30,11 @@ func (e *LoxError) String() string {
 	var ret string
 	switch e.t {
 	case ParseError, ResolveError:
-		ret = fmt.Sprintf("[line %d] Error at '%s': %s", e.tk.row, e.tk.lexeme, e.msg)
+		if e.tk.typ == EOF {
+			ret = fmt.Sprintf("[line %d] Error at end: %s", e.tk.row, e.msg)
+		} else {
+			ret = fmt.Sprintf("[line %d] Error at '%s': %s", e.tk.row, e.tk.lexeme, e.msg)
+		}
 	case RuntimeError:
 		ret = fmt.Sprintf("%s\n[line %d]", e.msg, e.tk.row)
 	default:

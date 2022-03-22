@@ -300,7 +300,7 @@ func (i *Interpreter) VisitCall(expr *ExprCall) (interface{}, error) {
 
 	function, callable := callee.(LoxCallable)
 	if !callable {
-		return nil, i.runtimeError(expr.Paren, "totally not a function")
+		panic(NewLoxError(RuntimeError, expr.Paren, "Can only call functions and classes."))
 	}
 
 	args := make([]interface{}, 0)
@@ -501,11 +501,8 @@ func (i *Interpreter) VisitFun(statement *StmtFun) (interface{}, error) {
 // Return implements the error interface, and throwed in VisitReturn.
 // Should be caught at LoxFunction.Call
 type Return struct {
-	value interface{}
-}
-
-func (r *Return) Value() interface{} {
-	return r.value
+	HasVal bool
+	Value  interface{}
 }
 
 func (r *Return) Error() string {
@@ -516,11 +513,11 @@ func (i *Interpreter) VisitReturn(statement *StmtReturn) (interface{}, error) {
 	if statement.Value != nil {
 		value, err := i.eval(statement.Value)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
-		return nil, &Return{value: value}
+		panic(&Return{true, value})
 	}
-	return nil, nil
+	panic(&Return{false, nil})
 }
 
 func (i *Interpreter) defineMethod(class *LoxClass, statement *StmtFun) {
